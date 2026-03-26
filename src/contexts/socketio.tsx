@@ -24,6 +24,7 @@ export type User = {
   lastSeen: string;
   createdAt: string;
 };
+
 export type Message = {
   id: string;
   sessionId: string;
@@ -63,29 +64,70 @@ const SocketContextProvider = ({ children }: { children: ReactNode }) => {
   const [isCurrentUser, setIsCurrentUser] = useState(false);
   const { toast } = useToast();
 
-  // SETUP SOCKET.IO
   useEffect(() => {
-    if (!process.env.NEXT_PUBLIC_WS_URL) return
-    const socket = io(process.env.NEXT_PUBLIC_WS_URL!, {
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "https://socket.nikhilsharma.in"; 
+    // If you have your own socket server, please update NEXT_PUBLIC_WS_URL in .env
+    
+    if (!wsUrl) return;
+
+    const newSocket = io(wsUrl, {
       auth: {
-        sessionId: localStorage.getItem(SESSION_ID_KEY), // send on reconnect to restore session
+        sessionId: localStorage.getItem(SESSION_ID_KEY),
       },
-    });
-    setSocket(socket);
-    socket.on("connect", () => { });
-    socket.on("msgs-receive-init", (msgs) => {
-      setMsgs(msgs);
-    });
-    socket.on("session", ({ sessionId }) => {
-      localStorage.setItem(SESSION_ID_KEY, (sessionId));
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000,
     });
 
-    socket.on("msg-receive", (msgs) => {
-      setMsgs((p) => [...p, msgs]);
+    newSocket.on("connect", () => {
+      console.log("Connected to Realtime Server:", newSocket.id);
+      setIsCurrentUser(true);
     });
 
-    socket.on("warning", (data: { message: string }) => {
-      console.log(data)
+    newSocket.on("disconnect", () => {
+      console.log("Disconnected from Realtime Server");
+      setIsCurrentUser(false);
+    });
+
+    newSocket.on("session", ({ sessionId }) => {
+      console.log("Realtime Session initialized:", sessionId);
+      localStorage.setItem(SESSION_ID_KEY, sessionId);
+    });
+
+    newSocket.on("users-updated", (updatedUsers: User[]) => {
+      setUsers(updatedUsers);
+    });
+
+    newSocket.on("cursor-changed", (data) => {
+      setUsers((prev) => {
+        const newUsers = [...prev];
+        const userIndex = newUsers.findIndex((u) => u.socketId === data.socketId);
+        if (userIndex !== -1) {
+          newUsers[userIndex] = {
+            ...newUsers[userIndex],
+            posX: data.pos.x,
+            posY: data.pos.y,
+          };
+        } else {
+          // If user isn't in users-updated yet, add them from cursor-changed event if they include full data
+          // typically cursor-changed just has pos/socketId though.
+        }
+        return newUsers;
+      });
+    });
+
+    newSocket.on("msg-receive", (newMsg: Message) => {
+      setMsgs((prev) => [...prev, newMsg]);
+    });
+
+    newSocket.on("msgs-receive-init", (initialMsgs: Message[]) => {
+      setMsgs(initialMsgs);
+    });
+
+    newSocket.on("msg-delete", (data: { id: number }) => {
+      setMsgs((prev) => prev.filter((m) => Number(m.id) !== data.id));
+    });
+
+    newSocket.on("warning", (data: { message: string }) => {
       toast({
         variant: "destructive",
         title: "System Warning",
@@ -93,18 +135,16 @@ const SocketContextProvider = ({ children }: { children: ReactNode }) => {
       });
     });
 
-    socket.on("msg-delete", (data: { id: number }) => {
-      console.log(data)
-      setMsgs((prev) => prev.filter((m) => Number(m.id) !== data.id));
-    });
+    setSocket(newSocket);
+
     return () => {
-      socket.disconnect();
+      newSocket.disconnect();
     };
-  }, []);
-  const currentUser = users.find(u => u.socketId === socket?.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount
 
   return (
-    <SocketContext.Provider value={{ socket: socket, users, setUsers, msgs, isCurrentUser }}>
+    <SocketContext.Provider value={{ socket, users, setUsers, msgs, isCurrentUser }}>
       {children}
     </SocketContext.Provider>
   );
