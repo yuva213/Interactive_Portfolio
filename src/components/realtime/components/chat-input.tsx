@@ -13,7 +13,8 @@ interface ChatInputProps {
 export const ChatInput = ({ onSendMessage, onTyping, placeholder = "Message" }: ChatInputProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleSend = () => {
+  const handleSend = (e?: React.FormEvent | React.KeyboardEvent) => {
+    e?.preventDefault();
     if (!inputRef.current?.value) return;
     const msg = inputRef.current.value;
     inputRef.current.value = "";
@@ -30,14 +31,19 @@ export const ChatInput = ({ onSendMessage, onTyping, placeholder = "Message" }: 
           className={cn("flex-1 bg-transparent border-none outline-none font-medium min-w-0", THEME.text.primary, THEME.text.placeholder)}
           placeholder={placeholder}
           onChange={onTyping}
-          onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              handleSend(e);
+            }
+          }}
           autoComplete="off"
         />
         <Button
+          type="button"
           size="icon"
           variant="ghost"
           className={cn("h-8 w-8 shrink-0", THEME.text.secondary, THEME.bg.itemHover)}
-          onClick={handleSend}
+          onClick={(e) => handleSend(e)}
         >
           <Send className="w-4 h-4" />
         </Button>
