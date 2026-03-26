@@ -9,6 +9,8 @@
 # testing
 /coverage
 a.ps1
+.env
+
 
 # next.js
 /.next/
