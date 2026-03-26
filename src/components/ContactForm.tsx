@@ -34,7 +34,10 @@ const ContactForm = () => {
         }),
       });
       const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      if (!res.ok || data.error) {
+        throw new Error(data.error || "Failed to send message.");
+      }
+      
       toast({
         title: "Thank you!",
         description: "I'll get back to you as soon as possible.",
@@ -49,10 +52,21 @@ const ContactForm = () => {
         router.push("/");
         clearTimeout(timer);
       }, 1000);
-    } catch (err) {
+    } catch (err: any) {
+      let errorMessage = "Something went wrong! Please check the fields.";
+      if (err.message && typeof err.message === "string") {
+        try {
+          const parsed = JSON.parse(err.message);
+          if (Array.isArray(parsed) && parsed[0]?.message) {
+            errorMessage = parsed[0].message;
+          }
+        } catch {
+          errorMessage = err.message;
+        }
+      }
       toast({
         title: "Error",
-        description: "Something went wrong! Please check the fields.",
+        description: errorMessage,
         className: cn(
           "top-0 w-full flex justify-center fixed md:max-w-7xl md:top-4 md:right-4"
         ),
