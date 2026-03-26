@@ -15,41 +15,20 @@ const RemoteCursors = () => {
   const { socket, users: _users, setUsers } = useContext(SocketContext);
   const isMobile = useMediaQuery("(max-width: 768px)");
   const { x, y } = useMouse({ allowPage: true });
-  useEffect(() => {
-    if (typeof window === "undefined" || !socket || isMobile) return;
-    socket.on("cursor-changed", (data) => {
-      setUsers((prev: User[]) => {
-        const newUsers = [...prev]
-        const user = newUsers.find(u => u.socketId === data.socketId)
-        if (user) {
-          user.posX = data.pos.x;
-          user.posY = data.pos.y
-        } else {
-          newUsers.push({
-            ...data,
-          });
-        }
-        return newUsers;
-      });
-    });
-    socket.on("users-updated", (data: User[]) => {
-      setUsers(data);
-    });
-    return () => {
-      socket.off("cursor-changed");
-    };
-  }, [socket, isMobile]);
+
   const handleMouseMove = useThrottle((x, y) => {
     socket?.emit("cursor-change", {
       pos: { x, y },
       socketId: socket.id,
     });
   }, 200);
+
   useEffect(() => {
     if (isMobile) return;
     handleMouseMove(x, y);
   }, [x, y, isMobile]);
-  const users = Array.from(_users.values());
+
+  const users = _users;
   return (
     <div
       //  className="h-0 z-10 relative "
