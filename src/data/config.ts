@@ -25,22 +25,22 @@ const config = {
     "open source contributor",
   ],
   author: "Yuvaraj S",
-  email: "yuvaraj@example.com",
+  email: "yuvarajpro213@gmail.com",
   site: "https://my-portfoloi-seven.vercel.app",
 
   // for github stars button
-  githubUsername: "Akuttyprince",
+  githubUsername: "yuva213",
   githubRepo: "3d-portfolio",
 
   get ogImg() {
     return this.site + "/assets/seo/og-image.png";
   },
   social: {
-    twitter: "",
+    twitter: "https://x.com/yuvarajpro213",
     linkedin: "https://www.linkedin.com/in/yuva-raj-s-005419299/",
     instagram: "https://www.instagram.com/_yuva_rajj_/",
     facebook: "",
-    github: "https://github.com/Akuttyprince",
+    github: "https://github.com/yuva213",
   },
 };
 export { config };
