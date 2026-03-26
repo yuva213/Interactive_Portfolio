@@ -24,7 +24,7 @@ import { getAvatarUrl } from "@/lib/avatar";
 
 const OnlineUsers = () => {
   const { socket, users: _users, msgs } = useContext(SocketContext);
-  const users = Array.from(_users.values());
+  const users = _users;
   const [showUserList, setShowUserList] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
