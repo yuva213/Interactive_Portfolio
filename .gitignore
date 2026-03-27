@@ -9,6 +9,8 @@
 # testing
 /coverage
 a.ps1
+
+# env
 .env
 
 
