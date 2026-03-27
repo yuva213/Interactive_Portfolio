@@ -1,0 +1,13 @@
+{
+  "name": "portfolio-socket-server",
+  "version": "1.0.0",
+  "description": "Local Socket.io server for Portfolio real-time features",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "socket.io": "^4.7.5"
+  }
+}
