@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowLeft, CalendarDays, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import RevealAnimation from "@/components/reveal-animations";
+import { notFound } from "next/navigation";
 
 export async function generateStaticParams() {
   const posts = getBlogPosts();
@@ -14,12 +15,19 @@ export async function generateStaticParams() {
   }));
 }
 
-export async function generateMetadata({ params }: { params: { slug: string } }) {
-  const post = getBlogPost(params.slug);
-  return {
-    title: `${post.metadata.title} | Portfolio`,
-    description: post.metadata.summary,
-  };
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  try {
+    const post = getBlogPost(slug);
+    return {
+      title: `${post.metadata.title} | Portfolio`,
+      description: post.metadata.summary,
+    };
+  } catch {
+    return {
+      title: "Blog Not Found | Portfolio",
+    };
+  }
 }
 
 const components = {
@@ -59,8 +67,17 @@ const components = {
   ),
 };
 
-export default function BlogPost({ params }: { params: { slug: string } }) {
-  const post = getBlogPost(params.slug);
+export default async function BlogPost({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+
+  let post;
+  try {
+    post = getBlogPost(slug);
+  } catch {
+    notFound();
+  }
+
+  if (!post) notFound();
 
   return (
     <div className="min-h-screen relative font-sans">
