@@ -4,16 +4,21 @@ const { randomUUID } = require("crypto");
 
 const PORT = process.env.PORT || 3001;
 
+// Health check for generic HTTP requests
 const httpServer = createServer((req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.writeHead(200, { "Content-Type": "text/plain" });
-  res.end("Socket.io server is running\n");
+  res.end("🚀 Portfolio Realtime Socket Server is Running!\nCheck /socket.io for socket connectivity.\n");
 });
 
 const io = new Server(httpServer, {
   cors: {
-    origin: "*",
+    origin: ["https://interactive-portfolio-ruddy.vercel.app", "http://localhost:3000", "https://interactive-portfolio-seven.vercel.app"],
     methods: ["GET", "POST"],
+    credentials: true,
   },
+  allowEIO3: true,
 });
 
 // In-memory store
@@ -58,9 +63,9 @@ io.on("connection", (socket) => {
   const user = {
     id: sessionId,
     socketId: socket.id,
-    name: localStorage_getItem(sessionId, "name") || getRandomName(),
-    avatar: localStorage_getItem(sessionId, "avatar") || getRandomAvatar(),
-    color: localStorage_getItem(sessionId, "color") || getRandomColor(),
+    name: getRandomName(),
+    avatar: getRandomAvatar(),
+    color: getRandomColor(),
     isOnline: "true",
     posX: 0,
     posY: 0,
@@ -77,7 +82,6 @@ io.on("connection", (socket) => {
   socket.emit("msgs-receive-init", messages);
 
   console.log(`✅ User connected: ${user.name} [${socket.id}] (session: ${sessionId.slice(0, 8)}...)`);
-  console.log(`   Total online: ${users.size}`);
 
   // --- Handle cursor movement ---
   socket.on("cursor-change", (data) => {
@@ -89,15 +93,6 @@ io.on("connection", (socket) => {
     socket.broadcast.emit("cursor-changed", {
       socketId: socket.id,
       pos: data.pos,
-    });
-  });
-
-  // --- Handle typing ---
-  socket.on("typing-send", (data) => {
-    const u = users.get(socket.id);
-    socket.broadcast.emit("typing-receive", {
-      socketId: socket.id,
-      username: u?.name || data.username || "Anonymous",
     });
   });
 
@@ -119,42 +114,21 @@ io.on("connection", (socket) => {
     };
 
     messages.push(msg);
-
-    // Broadcast to ALL clients (including sender)
     io.emit("msg-receive", msg);
-
-    console.log(`💬 [${u.name}]: ${data.content}`);
-  });
-
-  // --- Handle profile update ---
-  socket.on("update-user", (data) => {
-    const u = users.get(socket.id);
-    if (!u) return;
-
-    if (data.username) u.name = data.username;
-    if (data.avatar) u.avatar = data.avatar;
-    if (data.color) u.color = data.color;
-
-    broadcastUsers();
-    console.log(`✏️  Profile updated: ${u.name}`);
   });
 
   // --- Handle disconnect ---
   socket.on("disconnect", () => {
     const u = users.get(socket.id);
-    console.log(`❌ User disconnected: ${u?.name || "Unknown"} [${socket.id}]`);
-    users.delete(socket.id);
-    broadcastUsers();
-    console.log(`   Total online: ${users.size}`);
+    if (u) {
+      console.log(`❌ User disconnected: ${u.name} [${socket.id}]`);
+      users.delete(socket.id);
+      broadcastUsers();
+    }
   });
 });
 
-// Helper to simulate per-session storage on server side (just use defaults)
-function localStorage_getItem(sessionId, key) {
-  return null; // server doesn't persist user prefs between sessions
-}
-
-httpServer.listen(PORT, () => {
-  console.log(`🚀 Socket.io server running at http://localhost:${PORT}`);
-  console.log(`   CORS: all origins allowed`);
+// --- Start Server ---
+httpServer.listen(PORT, "0.0.0.0", () => {
+  console.log(`🚀 Socket.io server running at http://0.0.0.0:${PORT}`);
 });
