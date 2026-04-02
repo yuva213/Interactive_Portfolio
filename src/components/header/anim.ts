@@ -1,6 +1,8 @@
-const transition = { duration: 1, ease: [0.76, 0, 0.24, 1] };
+import { Variants } from "framer-motion";
 
-export const opacity = {
+const transition = { duration: 1, ease: [0.76, 0, 0.24, 1] as const };
+
+export const opacity: Variants = {
   initial: {
     opacity: 0
   },
@@ -14,7 +16,7 @@ export const opacity = {
   }
 };
 
-export const height = {
+export const height: Variants = {
   initial: {
     height: 0
   },
@@ -28,7 +30,7 @@ export const height = {
   }
 };
 
-export const background = {
+export const background: Variants = {
   initial: {
     height: 0
   },
@@ -42,7 +44,7 @@ export const background = {
   }
 };
 
-export const blur = {
+export const blur: Variants = {
   initial: {
     filter: 'blur(0px)',
     opacity: 1
@@ -59,7 +61,7 @@ export const blur = {
   }
 };
 
-export const translate = {
+export const translate: any = {
   initial: {
     y: '100%',
     opacity: 0
