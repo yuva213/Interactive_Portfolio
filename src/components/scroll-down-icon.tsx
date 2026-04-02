@@ -22,7 +22,7 @@ const ScrollDownIcon = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.7, ease: [0.76, 0, 0.24, 1] }}
+          transition={{ duration: 0.7, ease: [0.76, 0, 0.24, 1] as const }}
           className="w-fit min-h-[50px] p-1 border-2 rounded-full border-gray-500 dark:border-white "
         >
           <motion.div
