@@ -44,11 +44,20 @@ export async function POST(req: Request) {
     });
 
     if (resendError) {
-      return Response.json({ error: resendError.message }, { status: 500 });
+      console.error("Resend API Error:", resendError);
+      return Response.json({ 
+        error: resendError.message, 
+        details: resendError 
+      }, { status: 500 });
     }
 
     return Response.json({ data: resendData });
   } catch (error) {
-    return Response.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
+    console.error("Internal Server Error in /api/send:", error);
+    return Response.json({ 
+      error: error instanceof Error ? error.message : "Unknown error",
+      stack: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : undefined) : undefined
+    }, { status: 500 });
   }
 }
+
