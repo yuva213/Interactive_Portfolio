@@ -95,12 +95,10 @@ const Modall = ({ project }: { project: any }) => {
             </div>
           </div>
         </ModalTrigger>
-        <ModalBody className="md:max-w-4xl md:max-h-[80%] overflow-auto bg-black border border-zinc-800">
-          <SmoothScroll isInsideModal={true}>
-            <ModalContent>
-              <ProjectContents project={project} />
-            </ModalContent>
-          </SmoothScroll>
+        <ModalBody className="md:max-w-4xl md:max-h-[80%] overflow-auto bg-black border border-zinc-800 scrollbar-hide">
+          <ModalContent>
+            <ProjectContents project={project} />
+          </ModalContent>
           <ModalFooter className="gap-4 bg-zinc-950/50 border-t border-zinc-900">
             <button className="px-4 py-2 text-zinc-500 hover:text-white transition-colors text-sm">
               Close
