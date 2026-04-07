@@ -161,15 +161,28 @@ export default function AdminDashboard() {
         return "Other";
       };
 
-      const projectsToCreate = repos.map((repo: any) => ({
-        title: repo.name.replace(/[-_]/g, ' '),
-        category: mapTech(repo.language),
-        content: repo.description || "No description provided for this repository.",
-        src: `https://opengraph.githubassets.com/1/${repo.owner.login}/${repo.name}`,
-        screenshots: [],
-        skills: { frontend: repo.language ? [repo.language] : [], backend: [] },
-        github: repo.html_url,
-        live: repo.homepage || "",
+      const projectsToCreate = await Promise.all(repos.map(async (repo: any) => {
+        let contentStr = repo.description || "No description provided for this repository.";
+        try {
+          const readmeRes = await fetch(`https://raw.githubusercontent.com/${repo.owner.login}/${repo.name}/${repo.default_branch}/README.md`);
+          if (readmeRes.ok) {
+            const text = await readmeRes.text();
+            if (text && text.length > 20) contentStr = text; // Use README if substantial
+          }
+        } catch (e) {
+          // ignore failing readme fetch
+        }
+
+        return {
+          title: repo.name.replace(/[-_]/g, ' '),
+          category: mapTech(repo.language),
+          content: contentStr,
+          src: `https://opengraph.githubassets.com/1/${repo.owner.login}/${repo.name}`,
+          screenshots: [],
+          skills: { frontend: repo.language ? [repo.language] : [], backend: [] },
+          github: repo.html_url,
+          live: repo.homepage || "",
+        };
       }));
 
       const bulkRes = await fetch("/api/admin/projects/bulk", {
