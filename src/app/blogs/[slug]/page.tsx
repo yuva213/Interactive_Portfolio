@@ -9,13 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import RevealAnimation from "@/components/reveal-animations";
 import { notFound } from "next/navigation";
 
-export async function generateStaticParams() {
-  await dbConnect();
-  const posts = await Blog.find({ isPublished: true }, { slug: 1 }).lean();
-  return posts.map((post: any) => ({
-    slug: post.slug,
-  }));
-}
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
