@@ -99,15 +99,24 @@ const Modall = ({ project }: { project: any }) => {
           <ModalContent>
             <ProjectContents project={project} />
           </ModalContent>
-          <ModalFooter className="gap-4 bg-zinc-950/50 border-t border-zinc-900">
+          <ModalFooter className="gap-4 bg-zinc-950/50 border-t border-zinc-900 justify-end">
             <button className="px-4 py-2 text-zinc-500 hover:text-white transition-colors text-sm">
               Close
             </button>
-            <Link href={project.live} target="_blank">
-              <button className="bg-white text-black text-sm px-6 py-2 rounded-md font-bold hover:bg-zinc-200 transition-colors">
-                Visit Website
-              </button>
-            </Link>
+            {project.github && project.github.length > 5 && (
+              <Link href={project.github} target="_blank">
+                <button className="bg-zinc-800 text-white text-sm px-6 py-2 rounded-md font-bold hover:bg-zinc-700 transition-colors uppercase tracking-widest">
+                  Source Code
+                </button>
+              </Link>
+            )}
+            {project.live && project.live.length > 5 && (
+              <Link href={project.live} target="_blank">
+                <button className="bg-white text-black text-sm px-6 py-2 rounded-md font-bold hover:bg-zinc-200 transition-colors uppercase tracking-widest">
+                  Visit Website
+                </button>
+              </Link>
+            )}
           </ModalFooter>
         </ModalBody>
       </Modal>
