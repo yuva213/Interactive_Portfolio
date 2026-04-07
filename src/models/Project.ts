@@ -27,7 +27,7 @@ const ProjectSchema: Schema = new Schema(
       backend: [{ type: String }],
     },
     github: { type: String },
-    live: { type: String, required: true },
+    live: { type: String },
     order: { type: Number, default: 0 },
   },
   { timestamps: true }
