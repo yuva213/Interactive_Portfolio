@@ -19,6 +19,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [addingTask, setAddingTask] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [syncingAll, setSyncingAll] = useState(false);
   const router = useRouter();
 
   const [newProject, setNewProject] = useState({
@@ -143,6 +144,53 @@ export default function AdminDashboard() {
     router.push("/admin/login");
   };
 
+  const handleBulkSync = async () => {
+    const username = prompt("Enter your GitHub username to sync all public repositories automatically:", "yuva213");
+    if (!username) return;
+    setSyncingAll(true);
+    try {
+      const res = await fetch(`https://api.github.com/users/${username}/repos?sort=updated&per_page=100`);
+      const repos = await res.json();
+      if (!Array.isArray(repos)) throw new Error("Could not fetch repositories.");
+
+      const mapTech = (lang: string) => {
+        if (!lang) return "Other";
+        const l = lang.toLowerCase();
+        if (["javascript", "typescript", "html", "css", "vue"].includes(l)) return "Frontend";
+        if (["python", "java", "c++", "c", "go", "rust", "php", "ruby"].includes(l)) return "Backend";
+        return "Other";
+      };
+
+      const projectsToCreate = repos.map((repo: any) => ({
+        title: repo.name.replace(/[-_]/g, ' '),
+        category: mapTech(repo.language),
+        content: repo.description || "No description provided for this repository.",
+        src: `https://opengraph.githubassets.com/1/${repo.owner.login}/${repo.name}`,
+        screenshots: [],
+        skills: { frontend: repo.language ? [repo.language] : [], backend: [] },
+        github: repo.html_url,
+        live: repo.homepage || "",
+      }));
+
+      const bulkRes = await fetch("/api/admin/projects/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(projectsToCreate)
+      });
+
+      if (bulkRes.ok) {
+        alert(`Successfully imported ${projectsToCreate.length} projects!`);
+        fetchItems();
+      } else {
+        alert("Failed to import projects.");
+      }
+    } catch (err: any) {
+      alert("Error: " + err.message);
+    } finally {
+      setSyncingAll(false);
+    }
+  };
+
   const CATEGORIES = ["Web App", "Frontend", "Backend", "Fullstack", "AI / ML", "Mobile", "Web3", "Other"];
 
   return (
@@ -227,7 +275,17 @@ export default function AdminDashboard() {
                 <h2 className="text-xs font-black text-zinc-700 uppercase tracking-[0.3em] italic">
                     LIVE_REPOSITORY ({items.length})
                 </h2>
-                <div className="h-px bg-zinc-900 flex-1 ml-6" />
+                <div className="h-px bg-zinc-900 flex-1 mx-6" />
+                {activeTab === "projects" && (
+                    <Button 
+                        onClick={handleBulkSync} 
+                        disabled={syncingAll}
+                        className="bg-purple-500/10 text-purple-500 border border-purple-500/20 hover:bg-purple-500 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest"
+                    >
+                        {syncingAll ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : <Github className="w-3 h-3 mr-2" />}
+                        {syncingAll ? "SYNCING..." : "AUTO_SYNC_ALL"}
+                    </Button>
+                )}
             </div>
             
             {loading ? (
