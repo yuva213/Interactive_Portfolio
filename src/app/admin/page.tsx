@@ -28,6 +28,7 @@ export default function AdminDashboard() {
     src: "",
     live: "",
     github: "",
+    screenshots: [],
     skills: { frontend: [], backend: [] },
   });
 
@@ -138,9 +139,11 @@ export default function AdminDashboard() {
   };
 
   const handleLogout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
+    const res = await fetch("/api/auth/logout", { method: "POST" });
     router.push("/admin/login");
   };
+
+  const CATEGORIES = ["Web App", "Frontend", "Backend", "Fullstack", "AI / ML", "Mobile", "Web3", "Other"];
 
   return (
     <div className="min-h-screen bg-black text-white p-4 md:p-8 font-sans selection:bg-purple-500/30">
@@ -187,6 +190,7 @@ export default function AdminDashboard() {
                             setNewProject={setNewProject} 
                             uploading={uploading} 
                             handleFileUpload={handleFileUpload} 
+                            CATEGORIES={CATEGORIES}
                         />
                     )}
 
@@ -373,10 +377,14 @@ const TechPicker = ({ label, selected, onToggle, category }: any) => {
     );
 };
 
-const ProjectForm = ({ newProject, setNewProject, uploading, handleFileUpload }: any) => {
+const ProjectForm = ({ newProject, setNewProject, uploading, handleFileUpload, CATEGORIES }: any) => {
+    const [githubUsername, setGithubUsername] = useState("yuva213");
+    const [fetchingRepos, setFetchingRepos] = useState(false);
+    const [repos, setRepos] = useState([]);
+
     const toggleSkill = (skillName: string, category: "frontend" | "backend") => {
         setNewProject((prev: any) => {
-            const current = prev.skills[category];
+            const current = prev.skills[category] || [];
             const updated = current.includes(skillName) 
                 ? current.filter((s: string) => s !== skillName)
                 : [...current, skillName];
@@ -384,16 +392,54 @@ const ProjectForm = ({ newProject, setNewProject, uploading, handleFileUpload }:
         });
     };
 
+    const fetchGithubRepos = async () => {
+        if (!githubUsername) return;
+        setFetchingRepos(true);
+        try {
+            const res = await fetch(`https://api.github.com/users/${githubUsername}/repos?sort=updated&per_page=100`);
+            const data = await res.json();
+            if (Array.isArray(data)) {
+                setRepos(data.map((r: any) => r.html_url));
+            }
+        } catch {
+            console.error("Failed to fetch repos");
+        } finally {
+            setFetchingRepos(false);
+        }
+    };
+
+    const addScreenshot = (url: string) => {
+        if (!url) return;
+        setNewProject((prev: any) => ({ ...prev, screenshots: [...(prev.screenshots || []), url] }));
+    };
+
+    const removeScreenshot = (index: number) => {
+        setNewProject((prev: any) => ({
+            ...prev,
+            screenshots: prev.screenshots.filter((_: any, i: number) => i !== index)
+        }));
+    };
+
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-500">
-            <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">TITLE</Label>
-                    <Input value={newProject.title} onChange={(e) => setNewProject({...newProject, title: e.target.value})} placeholder="Project_X" required className="bg-zinc-950 border-zinc-900 h-14 rounded-2xl font-black italic"/>
-                </div>
-                <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">CATEGORY</Label>
-                    <Input value={newProject.category} onChange={(e) => setNewProject({...newProject, category: e.target.value})} placeholder="Web3 / AI" required className="bg-zinc-950 border-zinc-900 h-14 rounded-2xl font-black italic"/>
+            <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">TITLE</Label>
+                <Input value={newProject.title} onChange={(e) => setNewProject({...newProject, title: e.target.value})} placeholder="Project_X" required className="bg-zinc-950 border-zinc-900 h-14 rounded-2xl font-black italic"/>
+            </div>
+
+            <div className="space-y-4">
+                <Label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest block">CATEGORY</Label>
+                <div className="flex flex-wrap gap-2">
+                    {CATEGORIES.map((cat: string) => (
+                        <button
+                            key={cat}
+                            type="button"
+                            onClick={() => setNewProject({...newProject, category: cat})}
+                            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${newProject.category === cat ? "bg-purple-500 text-white" : "bg-zinc-950 border border-zinc-900 text-zinc-500 hover:border-zinc-700 hover:text-white"}`}
+                        >
+                            {cat}
+                        </button>
+                    ))}
                 </div>
             </div>
 
@@ -406,32 +452,94 @@ const ProjectForm = ({ newProject, setNewProject, uploading, handleFileUpload }:
                 label="MAIN_THUMBNAIL" 
                 value={newProject.src} 
                 onChange={(val: string) => setNewProject({...newProject, src: val})} 
-                onUpload={(file: File) => handleFileUpload(file, "projects")}
-                uploading={uploading}
+                onUpload={async (file: File) => {
+                    const formData = new FormData();
+                    formData.append("file", file);
+                    const res = await fetch("/api/admin/upload", { method: "POST", body: formData });
+                    const data = await res.json();
+                    if (data.url) setNewProject((prev: any) => ({ ...prev, src: data.url }));
+                }}
+                uploading={false} // Will handle local loading inside ImageUpload potentially, but okay for now.
             />
 
-            <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-4 bg-zinc-950 p-6 rounded-[2rem] border border-zinc-900">
+                <Label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest block">GALLERY (EXTRA_IMAGES)</Label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    {newProject.screenshots?.map((url: string, idx: number) => (
+                        <div key={idx} className="relative aspect-video rounded-xl overflow-hidden group">
+                            <img src={url} className="w-full h-full object-cover" />
+                            <button type="button" onClick={() => removeScreenshot(idx)} className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Trash2 className="w-3 h-3" />
+                            </button>
+                        </div>
+                    ))}
+                    <div className="aspect-video relative rounded-xl border border-zinc-800 flex items-center justify-center hover:bg-zinc-900 transition-colors cursor-pointer">
+                        <Upload className="w-6 h-6 text-zinc-600" />
+                        <input 
+                            type="file" 
+                            accept="image/*" 
+                            className="absolute inset-0 opacity-0 cursor-pointer"
+                            onChange={async (e) => {
+                                if (e.target.files?.[0]) {
+                                    const formData = new FormData();
+                                    formData.append("file", e.target.files[0]);
+                                    const res = await fetch("/api/admin/upload", { method: "POST", body: formData });
+                                    const data = await res.json();
+                                    if (data.url) addScreenshot(data.url);
+                                }
+                            }} 
+                        />
+                    </div>
+                </div>
+            </div>
+
+            <div className="space-y-6">
                 <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest block"><Globe className="w-3 h-3 inline mr-1" /> LIVE_URL</Label>
                     <Input value={newProject.live} onChange={(e) => setNewProject({...newProject, live: e.target.value})} placeholder="https://..." className="bg-zinc-950 border-zinc-900 h-14 rounded-2xl text-xs font-mono"/>
                 </div>
-                <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest block"><Github className="w-3 h-3 inline mr-1" /> GH_REPO</Label>
-                    <Input value={newProject.github} onChange={(e) => setNewProject({...newProject, github: e.target.value})} placeholder="https://github.com/..." className="bg-zinc-950 border-zinc-900 h-14 rounded-2xl text-xs font-mono"/>
+                
+                <div className="space-y-4 p-6 border border-zinc-900 rounded-[2rem] bg-zinc-950/50">
+                    <Label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest block"><Github className="w-3 h-3 inline mr-1" /> GITHUB REPOSITORY</Label>
+                    
+                    <div className="flex gap-2">
+                        <Input value={githubUsername} onChange={(e) => setGithubUsername(e.target.value)} placeholder="GitHub Username" className="bg-zinc-950 border-zinc-800 text-xs font-mono max-w-[150px]"/>
+                        <Button type="button" onClick={fetchGithubRepos} variant="outline" className="border-zinc-800 text-xs h-10" disabled={fetchingRepos}>
+                            {fetchingRepos ? <Loader2 className="w-4 h-4 animate-spin" /> : "FETCH"}
+                        </Button>
+                    </div>
+
+                    {repos.length > 0 && (
+                        <div className="max-h-40 overflow-y-auto border border-zinc-800 rounded-xl bg-black scrollbar-hide">
+                            {repos.map((repoUrl: string) => (
+                                <div 
+                                    key={repoUrl}
+                                    onClick={() => setNewProject({...newProject, github: repoUrl})}
+                                    className={`p-3 text-xs font-mono cursor-pointer transition-colors ${newProject.github === repoUrl ? "bg-purple-500/20 text-purple-400" : "hover:bg-zinc-900 text-zinc-500 hover:text-zinc-300"}`}
+                                >
+                                    {repoUrl.replace("https://github.com/", "")}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    
+                    <div className="relative group">
+                        <Input value={newProject.github} onChange={(e) => setNewProject({...newProject, github: e.target.value})} placeholder="Or paste full https://github.com/... url" className="bg-black border-zinc-800 h-14 rounded-2xl text-xs font-mono"/>
+                    </div>
                 </div>
             </div>
 
             <TechPicker 
                 label="FRONTEND_STACK" 
                 category="frontend" 
-                selected={newProject.skills.frontend} 
+                selected={newProject.skills.frontend || []} 
                 onToggle={toggleSkill} 
             />
             
             <TechPicker 
                 label="BACKEND_STACK" 
                 category="backend" 
-                selected={newProject.skills.backend} 
+                selected={newProject.skills.backend || []} 
                 onToggle={toggleSkill} 
             />
         </div>
