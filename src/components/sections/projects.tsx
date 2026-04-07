@@ -18,6 +18,14 @@ import { SectionHeader } from "./section-header";
 import SectionWrapper from "../ui/section-wrapper";
 import { Loader2 } from "lucide-react";
 
+const isValidUrl = (url: string) => {
+  try {
+    return url && (url.startsWith("/") || url.startsWith("http://") || url.startsWith("https://"));
+  } catch {
+    return false;
+  }
+};
+
 const ProjectsSection = () => {
   const [data, setData] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -60,14 +68,6 @@ const ProjectsSection = () => {
 };
 
 const Modall = ({ project }: { project: any }) => {
-  const isValidUrl = (url: string) => {
-    try {
-      return url && (url.startsWith("/") || url.startsWith("http://") || url.startsWith("https://"));
-    } catch {
-      return false;
-    }
-  };
-
   const displaySrc = isValidUrl(project.src) ? project.src : "https://images.unsplash.com/photo-1555066931-4365d14bab8c?q=80&w=1000&auto=format&fit=crop";
 
   return (
@@ -148,6 +148,29 @@ const ProjectContents = ({ project }: { project: any }) => {
           project.content
         )}
       </div>
+
+      {project.screenshots && project.screenshots.length > 0 && (
+        <div className="mt-16 space-y-8">
+          <h4 className="text-xl font-bold text-zinc-300 uppercase tracking-widest border-b border-zinc-900 pb-4">
+            PROJECT_GALLERY
+          </h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {project.screenshots.map((img: string, idx: number) => {
+              const displayImg = isValidUrl(img) ? img : "https://images.unsplash.com/photo-1555066931-4365d14bab8c?q=80&w=1000&auto=format&fit=crop";
+              return (
+                <div key={idx} className="relative aspect-video rounded-2xl overflow-hidden border border-zinc-800 shadow-xl group">
+                  <Image 
+                    src={displayImg} 
+                    alt={`${project.title} screenshot ${idx + 1}`} 
+                    fill 
+                    className="object-cover group-hover:scale-105 transition-transform duration-700" 
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
