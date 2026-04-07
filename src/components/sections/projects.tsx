@@ -84,6 +84,7 @@ const Modall = ({ project }: { project: any }) => {
               alt={project.title}
               width={400}
               height={400}
+              unoptimized={true}
             />
             <div className="absolute w-full h-1/2 bottom-0 left-0 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none">
               <div className="flex flex-col h-full items-start justify-end p-6">
@@ -95,7 +96,7 @@ const Modall = ({ project }: { project: any }) => {
             </div>
           </div>
         </ModalTrigger>
-        <ModalBody className="md:max-w-4xl md:max-h-[80%] overflow-auto bg-black border border-zinc-800 scrollbar-hide">
+        <ModalBody data-lenis-prevent="true" className="md:max-w-4xl md:max-h-[80%] overflow-auto bg-black border border-zinc-800 scrollbar-hide">
           <ModalContent>
             <ProjectContents project={project} />
           </ModalContent>
@@ -171,6 +172,7 @@ const ProjectContents = ({ project }: { project: any }) => {
                     alt={`${project.title} screenshot ${idx + 1}`} 
                     fill 
                     className="object-cover group-hover:scale-105 transition-transform duration-700" 
+                    unoptimized={true}
                   />
                 </div>
               );
