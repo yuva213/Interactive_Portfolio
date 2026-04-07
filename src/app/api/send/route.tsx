@@ -3,6 +3,7 @@ import { EmailTemplate } from "@/components/email-template";
 import { config } from "@/data/config";
 import { Resend } from "resend";
 import { z } from "zod";
+import { render } from "@react-email/render";
 
 const Email = z.object({
   fullName: z.string().min(2, "Full name is invalid!"),
@@ -30,17 +31,19 @@ export async function POST(req: Request) {
 
     const resend = new Resend(process.env.RESEND_API_KEY);
 
+    const html = await render(
+      <EmailTemplate
+        fullName={zodData.fullName}
+        email={zodData.email}
+        message={zodData.message}
+      />
+    );
+
     const { data: resendData, error: resendError } = await resend.emails.send({
       from: "Portfolio <onboarding@resend.dev>",
       to: [config.email],
       subject: "Contact me from portfolio",
-      react: (
-        <EmailTemplate
-          fullName={zodData.fullName}
-          email={zodData.email}
-          message={zodData.message}
-        />
-      ) as React.ReactElement,
+      html: html,
     });
 
     if (resendError) {
