@@ -1,20 +1,26 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/ace-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/ace-textarea";
-import { Plus, Trash2, Loader2, LogOut, Briefcase, Rocket, FileText, CheckCircle, Circle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { 
+    Plus, Trash2, Loader2, LogOut, Briefcase, Rocket, 
+    FileText, CheckCircle, Upload, Link as LinkIcon, 
+    ChevronRight, Globe, Github
+} from "lucide-react";
 import { useRouter } from "next/navigation";
+import { SKILLS, SkillNames } from "@/data/constants";
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("projects");
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [addingTask, setAddingTask] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const router = useRouter();
 
-  // --- States for Creating ---
   const [newProject, setNewProject] = useState({
     title: "",
     category: "",
@@ -49,7 +55,7 @@ export default function AdminDashboard() {
       const endpoint = activeTab === "blogs" ? "/api/admin/blogs" : (activeTab === "projects" ? "/api/projects" : "/api/experience");
       const res = await fetch(endpoint);
       const data = await res.json();
-      setItems(data);
+      setItems(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(`Failed to fetch ${activeTab}`);
     } finally {
@@ -60,6 +66,32 @@ export default function AdminDashboard() {
   useEffect(() => {
     fetchItems();
   }, [activeTab]);
+
+  const handleFileUpload = async (file: File, type: "projects" | "blogs") => {
+    if (!file) return;
+    setUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch("/api/admin/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.url) {
+        if (type === "projects") {
+          setNewProject((prev) => ({ ...prev, src: data.url }));
+        } else {
+          setNewBlog((prev) => ({ ...prev, coverImage: data.url }));
+        }
+      }
+    } catch (err) {
+      console.error("Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,7 +116,6 @@ export default function AdminDashboard() {
 
       if (res.ok) {
         fetchItems();
-        // Reset states
         if (activeTab === "projects") setNewProject({ title: "", category: "", content: "", src: "", live: "", github: "", skills: { frontend: [], backend: [] } });
         else if (activeTab === "experience") setNewExperience({ title: "", company: "", startDate: "", endDate: "Present", description: "", skills: [], category: "work" });
         else if (activeTab === "blogs") setNewBlog({ title: "", content: "", coverImage: "", tags: "", isPublished: true });
@@ -112,153 +143,108 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white p-8 font-sans">
+    <div className="min-h-screen bg-black text-white p-4 md:p-8 font-sans selection:bg-purple-500/30">
       <div className="max-w-7xl mx-auto">
-        <header className="flex flex-col md:flex-row md:justify-between items-start md:items-center mb-12 gap-6">
+        <header className="flex flex-col md:flex-row md:justify-between items-start md:items-center mb-16 gap-8">
           <div>
-            <h1 className="text-5xl font-black bg-gradient-to-r from-white to-zinc-600 bg-clip-text text-transparent tracking-tighter">
-              YUVA <span className="text-zinc-700">OS</span>
-            </h1>
-            <div className="flex gap-1 mt-6 border border-zinc-900 rounded-full p-1 bg-zinc-950/20">
+            <div className="flex items-center gap-3 mb-2">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500" />
+                <h1 className="text-4xl font-black tracking-tighter uppercase italic">
+                    Control_Center <span className="text-zinc-800">v2</span>
+                </h1>
+            </div>
+            <p className="text-zinc-600 font-mono text-xs uppercase tracking-[0.2em] font-black">Authorized_Access_Only</p>
+            
+            <div className="flex gap-1 mt-8 p-1 bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl w-fit">
               {["projects", "experience", "blogs"].map((tab) => (
                 <button 
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`px-8 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${activeTab === tab ? "bg-white text-black" : "bg-black text-zinc-500 hover:text-zinc-200"}`}
+                  className={`px-6 md:px-10 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab ? "bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.2)]" : "text-zinc-500 hover:text-white"}`}
                 >
                   {tab}
                 </button>
               ))}
             </div>
           </div>
-          <Button variant="ghost" onClick={handleLogout} className="text-zinc-500 hover:text-red-500 hover:bg-zinc-900 mb-1">
-            <LogOut className="w-4 h-4 mr-2" /> EXIT
+          <Button variant="ghost" onClick={handleLogout} className="text-zinc-700 hover:text-red-500 hover:bg-red-500/10 transition-all font-black uppercase tracking-widest text-[10px]">
+            <LogOut className="w-4 h-4 mr-2" /> TERMINATE_SESSION
           </Button>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-          {/* Create Section */}
-          <section className="lg:col-span-5">
-            <div className="bg-zinc-900/30 border border-zinc-800/50 p-8 rounded-[2rem] sticky top-8 shadow-2xl">
-                <h2 className="text-2xl font-black mb-8 flex items-center tracking-tight text-white uppercase italic">
-                    {activeTab === "projects" ? <Rocket className="w-6 h-6 mr-3" /> : (activeTab === "experience" ? <Briefcase className="w-6 h-6 mr-3" /> : <FileText className="w-6 h-6 mr-3" />)}
-                    ADD {activeTab}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
+          <section className="lg:col-span-6">
+            <div className="bg-zinc-950/50 border border-zinc-900 p-8 md:p-12 rounded-[3.5rem] sticky top-8 shadow-2xl backdrop-blur-xl">
+                <h2 className="text-2xl font-black mb-10 flex items-center tracking-tighter text-white uppercase italic decoration-purple-500 decoration-4 underline-offset-8 underline">
+                    {activeTab === "projects" ? <Rocket className="w-6 h-6 mr-4 text-purple-500" /> : (activeTab === "experience" ? <Briefcase className="w-6 h-6 mr-4 text-purple-500" /> : <FileText className="w-6 h-6 mr-4 text-purple-500" />)}
+                    CREATE_NEW_{activeTab.slice(0, -1)}
                 </h2>
                 
-                <form onSubmit={handleCreate} className="space-y-4">
+                <form onSubmit={handleCreate} className="space-y-8">
                     {activeTab === "projects" && (
-                        <>
-                            <div className="space-y-2">
-                                <Label className="text-xs text-zinc-500">Project Title</Label>
-                                <Input value={newProject.title} onChange={(e) => setNewProject({...newProject, title: e.target.value})} placeholder="THALA-CREDIT" required className="bg-black border-zinc-800 text-white"/>
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="text-xs text-zinc-500">Category</Label>
-                                <Input value={newProject.category} onChange={(e) => setNewProject({...newProject, category: e.target.value})} placeholder="Web3 / AI / FinTech" required className="bg-black border-zinc-800 text-white"/>
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="text-xs text-zinc-500">Markdown Content</Label>
-                                <Textarea value={newProject.content} onChange={(e) => setNewProject({...newProject, content: e.target.value})} placeholder="Describe your vision..." required className="bg-black border-zinc-800 min-h-[120px]"/>
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="text-xs text-zinc-500">Thumbnail Path</Label>
-                                <Input value={newProject.src} onChange={(e) => setNewProject({...newProject, src: e.target.value})} placeholder="/assets/..." required className="bg-black border-zinc-800"/>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <Input value={newProject.live} onChange={(e) => setNewProject({...newProject, live: e.target.value})} placeholder="LIVE URL" className="bg-black border-zinc-800"/>
-                                <Input value={newProject.github} onChange={(e) => setNewProject({...newProject, github: e.target.value})} placeholder="GH REPO" className="bg-black border-zinc-800"/>
-                            </div>
-                        </>
+                        <ProjectForm 
+                            newProject={newProject} 
+                            setNewProject={setNewProject} 
+                            uploading={uploading} 
+                            handleFileUpload={handleFileUpload} 
+                        />
                     )}
 
                     {activeTab === "experience" && (
-                        <>
-                            <div className="space-y-2">
-                                <Label>Title / Position</Label>
-                                <Input value={newExperience.title} onChange={(e) => setNewExperience({...newExperience, title: e.target.value})} placeholder="MERN Stack Developer" required className="bg-black border-zinc-800"/>
-                            </div>
-                            <Input value={newExperience.company} onChange={(e) => setNewExperience({...newExperience, company: e.target.value})} placeholder="Company Name" required className="bg-black border-zinc-800"/>
-                            <div className="grid grid-cols-2 gap-4 text-left">
-                                <div className="space-y-2">
-                                    <Label className="text-xs text-zinc-500">START</Label>
-                                    <Input value={newExperience.startDate} onChange={(e) => setNewExperience({...newExperience, startDate: e.target.value})} placeholder="Jan 2024" required className="bg-black border-zinc-800"/>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label className="text-xs text-zinc-500">END</Label>
-                                    <Input value={newExperience.endDate} onChange={(e) => setNewExperience({...newExperience, endDate: e.target.value})} placeholder="Present" className="bg-black border-zinc-800"/>
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Achievements (Line by line)</Label>
-                                <Textarea value={newExperience.description} onChange={(e) => setNewExperience({...newExperience, description: e.target.value})} placeholder="Did some magic with JS..." required className="bg-black border-zinc-800 min-h-[150px]"/>
-                            </div>
-                        </>
+                        <ExperienceForm 
+                            newExperience={newExperience} 
+                            setNewExperience={setNewExperience} 
+                        />
                     )}
 
                     {activeTab === "blogs" && (
-                        <>
-                            <div className="space-y-2">
-                                <Label>Blog Post Title</Label>
-                                <Input value={newBlog.title} onChange={(e) => setNewBlog({...newBlog, title: e.target.value})} placeholder="How I built a dynamic MERN portfolio" required className="bg-black border-zinc-800"/>
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Markdown Article</Label>
-                                <Textarea value={newBlog.content} onChange={(e) => setNewBlog({...newBlog, content: e.target.value})} placeholder="# Header\nYour story begins here..." required className="bg-black border-zinc-800 min-h-[250px]"/>
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Cover Image Path</Label>
-                                <Input value={newBlog.coverImage} onChange={(e) => setNewBlog({...newBlog, coverImage: e.target.value})} placeholder="/assets/blogs/banner.png" className="bg-black border-zinc-800"/>
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Tags (Comma separated)</Label>
-                                <Input value={newBlog.tags} onChange={(e) => setNewBlog({...newBlog, tags: e.target.value})} placeholder="react, nextjs, mongodb" className="bg-black border-zinc-800"/>
-                            </div>
-                        </>
+                        <BlogForm 
+                            newBlog={newBlog} 
+                            setNewBlog={setNewBlog} 
+                            uploading={uploading} 
+                            handleFileUpload={handleFileUpload} 
+                        />
                     )}
 
-                    <Button type="submit" className="w-full bg-white text-black font-black h-16 mt-6 rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all" disabled={addingTask}>
-                        {addingTask ? <Loader2 className="animate-spin" /> : `SAVE ${activeTab.toUpperCase()}`}
+                    <Button type="submit" className="w-full bg-white text-black font-black h-20 mt-12 rounded-[1.5rem] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_20px_40px_-15px_rgba(255,255,255,0.2)] text-base uppercase italic tracking-tighter" disabled={addingTask}>
+                        {addingTask ? <Loader2 className="animate-spin" /> : (
+                            <div className="flex items-center gap-3">
+                                <span>PUSH_TO_DATABASE</span>
+                                <Plus className="w-5 h-5" />
+                            </div>
+                        )}
                     </Button>
                 </form>
             </div>
           </section>
 
-          {/* List Section */}
-          <section className="lg:col-span-7">
-            <h2 className="text-xl font-black mb-8 text-zinc-600 uppercase tracking-tighter">
-                ACTIVE_{activeTab} ({items.length})
-            </h2>
+          <section className="lg:col-span-6">
+            <div className="flex items-center justify-between mb-10">
+                <h2 className="text-xs font-black text-zinc-700 uppercase tracking-[0.3em] italic">
+                    LIVE_REPOSITORY ({items.length})
+                </h2>
+                <div className="h-px bg-zinc-900 flex-1 ml-6" />
+            </div>
             
             {loading ? (
-              <div className="flex justify-center p-20 bg-zinc-950/20 border border-zinc-900 rounded-[2rem]">
-                <Loader2 className="animate-spin w-12 h-12 text-zinc-800" />
+              <div className="flex flex-col items-center justify-center p-32 border border-zinc-900 rounded-[3.5rem] bg-zinc-950/20">
+                <Loader2 className="animate-spin w-10 h-10 text-zinc-800 mb-6" />
+                <p className="text-[10px] uppercase font-black tracking-widest text-zinc-800 italic">Synchronizing_Data...</p>
               </div>
             ) : (
-                <div className="space-y-3">
+                <div className="space-y-4">
                     {items.map((item: any) => (
-                        <div key={item._id} className="group flex items-center justify-between p-6 bg-zinc-950/40 border border-zinc-900 rounded-3xl hover:border-zinc-500 transition-all shadow-lg">
-                            <div className="flex items-center gap-6">
-                                {activeTab !== "experience" && (
-                                    <div className="w-20 h-20 bg-zinc-900 rounded-2xl overflow-hidden border border-zinc-800">
-                                        <img src={item.src || item.coverImage || "/assets/me.jpg"} className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity" />
-                                    </div>
-                                )}
-                                <div className="text-left">
-                                    <h3 className="text-xl font-black tracking-tight">{item.title}</h3>
-                                    <p className="text-xs text-zinc-500 font-mono flex items-center gap-2">
-                                        {activeTab === "blogs" && (item.isPublished ? <CheckCircle className="w-3 h-3 text-green-500" /> : <Circle className="w-3 h-3 text-zinc-700" />)}
-                                        {item.company || item.category || (item.tags?.join(", "))} • {item.startDate ? `${item.startDate}` : (new Date(item.publishedAt).toLocaleDateString())}
-                                    </p>
-                                </div>
-                            </div>
-                            <Button onClick={() => handleDelete(item._id)} size="icon" variant="ghost" className="text-zinc-800 hover:text-red-500 hover:bg-red-950/20">
-                                <Trash2 className="w-6 h-6 outline-none" />
-                            </Button>
-                        </div>
+                        <ListItem 
+                            key={item._id} 
+                            item={item} 
+                            activeTab={activeTab} 
+                            handleDelete={handleDelete} 
+                        />
                     ))}
                     {items.length === 0 && (
-                        <div className="p-40 border-2 border-dashed border-zinc-900 rounded-[3rem] text-center">
-                            <p className="text-zinc-800 font-black text-3xl uppercase tracking-tighter opacity-30">DATABASE_EMPTY</p>
+                        <div className="p-40 border-2 border-dashed border-zinc-900 rounded-[3.5rem] text-center flex flex-col items-center justify-center opacity-20">
+                            <Plus className="w-12 h-12 mb-6" />
+                            <p className="text-zinc-600 font-black text-3xl uppercase tracking-tighter italic">NO_RECORDS_FOUND</p>
                         </div>
                     )}
                 </div>
@@ -269,3 +255,321 @@ export default function AdminDashboard() {
     </div>
   );
 }
+
+const ImageUpload = ({ label, value, onChange, onUpload, uploading }: any) => {
+    const [dragActive, setDragActive] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleDrag = (e: any) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.type === "dragenter" || e.type === "dragover") setDragActive(true);
+        else if (e.type === "dragleave") setDragActive(false);
+    };
+
+    const handleDrop = (e: any) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setDragActive(false);
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            onUpload(e.dataTransfer.files[0]);
+        }
+    };
+
+    return (
+        <div className="space-y-4">
+            <Label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest block">{label}</Label>
+            
+            <div 
+                className={`relative group h-48 rounded-3xl border-2 border-dashed transition-all flex flex-col items-center justify-center gap-4 overflow-hidden ${dragActive ? "border-purple-500 bg-purple-500/10" : "border-zinc-900 hover:border-zinc-700 bg-zinc-950"}`}
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+            >
+                {value ? (
+                    <>
+                        <img src={value} className="absolute inset-0 w-full h-full object-cover opacity-20" />
+                        <div className="flex flex-col items-center z-10 p-4 text-center">
+                            <CheckCircle className="w-8 h-8 text-purple-500 mb-2" />
+                            <p className="text-[10px] font-mono text-zinc-500 truncate max-w-xs">{value}</p>
+                            <button type="button" onClick={() => onChange("")} className="mt-4 text-[10px] font-black text-red-500 hover:underline uppercase tracking-tighter">Remove_Media</button>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        {uploading ? (
+                             <Loader2 className="w-10 h-10 animate-spin text-zinc-800" />
+                        ) : (
+                            <>
+                                <Upload className="w-10 h-10 text-zinc-800 group-hover:text-purple-500 transition-colors" />
+                                <div className="text-center">
+                                    <p className="text-xs font-black uppercase text-zinc-600 tracking-tighter">Drag_&_Drop_Media</p>
+                                    <p className="text-[10px] text-zinc-800 font-mono italic">OR_CLICK_TO_BROWSE</p>
+                                </div>
+                            </>
+                        )}
+                        <input 
+                            ref={fileInputRef}
+                            type="file" 
+                            accept="image/*" 
+                            onChange={(e) => e.target.files?.[0] && onUpload(e.target.files[0])} 
+                            className="absolute inset-0 opacity-0 cursor-pointer"
+                            disabled={uploading}
+                        />
+                    </>
+                )}
+            </div>
+
+            <div className="flex items-center gap-4 px-2">
+                <div className="h-px bg-zinc-900 flex-1" />
+                <span className="text-[10px] font-black text-zinc-800 uppercase italic">Alternative_Source_URL</span>
+                <div className="h-px bg-zinc-900 flex-1" />
+            </div>
+
+            <div className="relative group">
+                <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-700 group-focus-within:text-purple-500 transition-colors" />
+                <Input 
+                    value={value} 
+                    onChange={(e) => onChange(e.target.value)} 
+                    placeholder="https://images.unsplash.com/..." 
+                    className="bg-zinc-950 border-zinc-900 h-14 pl-12 rounded-2xl text-xs font-mono italic"
+                />
+            </div>
+        </div>
+    );
+};
+
+const TechPicker = ({ label, selected, onToggle, category }: any) => {
+    return (
+        <div className="space-y-4">
+            <Label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest block">{label}</Label>
+            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-6 gap-3 p-6 bg-zinc-950 border border-zinc-900 rounded-3xl">
+                {Object.values(SKILLS).map((skill: any) => {
+                    const isSelected = selected.includes(skill.name);
+                    return (
+                        <button
+                            key={skill.name}
+                            type="button"
+                            onClick={() => onToggle(skill.name, category)}
+                            className={`group relative w-full aspect-square flex items-center justify-center rounded-2xl transition-all border-2 ${isSelected ? "bg-white border-white scale-110 shadow-[0_0_20px_rgba(255,255,255,0.2)]" : "bg-black border-zinc-900 grayscale hover:grayscale-0 hover:border-zinc-700"}`}
+                            title={skill.label}
+                        >
+                            <img 
+                                src={skill.icon} 
+                                alt={skill.label} 
+                                className={`w-3/5 h-3/5 object-contain transition-all ${isSelected ? "" : "opacity-40"}`} 
+                            />
+                            {isSelected && (
+                                <div className="absolute -top-1 -right-1 bg-purple-500 rounded-full p-1 border-2 border-white">
+                                    <CheckCircle className="w-2 h-2 text-white" />
+                                </div>
+                            )}
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
+const ProjectForm = ({ newProject, setNewProject, uploading, handleFileUpload }: any) => {
+    const toggleSkill = (skillName: string, category: "frontend" | "backend") => {
+        setNewProject((prev: any) => {
+            const current = prev.skills[category];
+            const updated = current.includes(skillName) 
+                ? current.filter((s: string) => s !== skillName)
+                : [...current, skillName];
+            return { ...prev, skills: { ...prev.skills, [category]: updated } };
+        });
+    };
+
+    return (
+        <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-500">
+            <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">TITLE</Label>
+                    <Input value={newProject.title} onChange={(e) => setNewProject({...newProject, title: e.target.value})} placeholder="Project_X" required className="bg-zinc-950 border-zinc-900 h-14 rounded-2xl font-black italic"/>
+                </div>
+                <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">CATEGORY</Label>
+                    <Input value={newProject.category} onChange={(e) => setNewProject({...newProject, category: e.target.value})} placeholder="Web3 / AI" required className="bg-zinc-950 border-zinc-900 h-14 rounded-2xl font-black italic"/>
+                </div>
+            </div>
+
+            <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">MARKDOWN_STORY</Label>
+                <Textarea value={newProject.content} onChange={(e) => setNewProject({...newProject, content: e.target.value})} placeholder="Describe the mission details..." required className="bg-zinc-950 border-zinc-900 min-h-[120px] rounded-[1.5rem] font-mono text-xs italic p-6"/>
+            </div>
+
+            <ImageUpload 
+                label="MAIN_THUMBNAIL" 
+                value={newProject.src} 
+                onChange={(val: string) => setNewProject({...newProject, src: val})} 
+                onUpload={(file: File) => handleFileUpload(file, "projects")}
+                uploading={uploading}
+            />
+
+            <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest block"><Globe className="w-3 h-3 inline mr-1" /> LIVE_URL</Label>
+                    <Input value={newProject.live} onChange={(e) => setNewProject({...newProject, live: e.target.value})} placeholder="https://..." className="bg-zinc-950 border-zinc-900 h-14 rounded-2xl text-xs font-mono"/>
+                </div>
+                <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest block"><Github className="w-3 h-3 inline mr-1" /> GH_REPO</Label>
+                    <Input value={newProject.github} onChange={(e) => setNewProject({...newProject, github: e.target.value})} placeholder="https://github.com/..." className="bg-zinc-950 border-zinc-900 h-14 rounded-2xl text-xs font-mono"/>
+                </div>
+            </div>
+
+            <TechPicker 
+                label="FRONTEND_STACK" 
+                category="frontend" 
+                selected={newProject.skills.frontend} 
+                onToggle={toggleSkill} 
+            />
+            
+            <TechPicker 
+                label="BACKEND_STACK" 
+                category="backend" 
+                selected={newProject.skills.backend} 
+                onToggle={toggleSkill} 
+            />
+        </div>
+    );
+};
+
+const ExperienceForm = ({ newExperience, setNewExperience }: any) => {
+    const toggleSkill = (skillName: string) => {
+        setNewExperience((prev: any) => {
+            const current = prev.skills;
+            const updated = current.includes(skillName) 
+                ? current.filter((s: string) => s !== skillName)
+                : [...current, skillName];
+            return { ...prev, skills: updated };
+        });
+    };
+
+    return (
+        <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-500">
+            <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">POSITION_TITLE</Label>
+                <Input value={newExperience.title} onChange={(e) => setNewExperience({...newExperience, title: e.target.value})} placeholder="Senior Architect" required className="bg-zinc-950 border-zinc-900 h-14 rounded-2xl font-black italic"/>
+            </div>
+            <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">COMPANY_ENTITY</Label>
+                <Input value={newExperience.company} onChange={(e) => setNewExperience({...newExperience, company: e.target.value})} placeholder="GLOBAL_TECH_INC" required className="bg-zinc-950 border-zinc-900 h-14 rounded-2xl font-black italic"/>
+            </div>
+
+            <div className="grid grid-cols-2 gap-6 text-left">
+                <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">START_MISSION</Label>
+                    <Input value={newExperience.startDate} onChange={(e) => setNewExperience({...newExperience, startDate: e.target.value})} placeholder="MAR 2024" required className="bg-zinc-950 border-zinc-900 h-14 rounded-2xl font-mono text-xs"/>
+                </div>
+                <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">END_MISSION</Label>
+                    <Input value={newExperience.endDate} onChange={(e) => setNewExperience({...newExperience, endDate: e.target.value})} placeholder="Present" className="bg-zinc-950 border-zinc-900 h-14 rounded-2xl font-mono text-xs"/>
+                </div>
+            </div>
+
+            <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">ACHIEVEMENTS (LINE_BY_LINE)</Label>
+                <Textarea value={newExperience.description} onChange={(e) => setNewExperience({...newExperience, description: e.target.value})} placeholder="» Optimized core algorithms...\n» Led a team of 10..." required className="bg-zinc-950 border-zinc-900 min-h-[150px] rounded-[1.5rem] font-mono text-xs italic p-6"/>
+            </div>
+
+            <TechPicker 
+                label="UTILIZED_TECHNOLOGIES" 
+                selected={newExperience.skills} 
+                onToggle={toggleSkill} 
+            />
+        </div>
+    );
+};
+
+const BlogForm = ({ newBlog, setNewBlog, uploading, handleFileUpload }: any) => {
+    return (
+        <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-500">
+            <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">ARTICLE_HEADING</Label>
+                <Input value={newBlog.title} onChange={(e) => setNewBlog({...newBlog, title: e.target.value})} placeholder="THE_FUTURE_OF_ML" required className="bg-zinc-950 border-zinc-900 h-14 rounded-2xl font-black italic"/>
+            </div>
+            
+            <ImageUpload 
+                label="COVER_IMAGE" 
+                value={newBlog.coverImage} 
+                onChange={(val: string) => setNewBlog({...newBlog, coverImage: val})} 
+                onUpload={(file: File) => handleFileUpload(file, "blogs")}
+                uploading={uploading}
+            />
+
+            <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">MARKDOWN_BODY</Label>
+                <Textarea value={newBlog.content} onChange={(e) => setNewBlog({...newBlog, content: e.target.value})} placeholder="# Header\nYour log entry..." required className="bg-zinc-950 border-zinc-900 min-h-[300px] rounded-[1.5rem] font-mono text-xs italic p-8"/>
+            </div>
+            
+            <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">TAGS (COMMA_SEPARATED)</Label>
+                <Input value={newBlog.tags} onChange={(e) => setNewBlog({...newBlog, tags: e.target.value})} placeholder="ml, react, cloud" className="bg-zinc-950 border-zinc-900 h-14 rounded-2xl font-mono text-xs italic"/>
+            </div>
+        </div>
+    );
+};
+
+const ListItem = ({ item, activeTab, handleDelete }: any) => {
+    return (
+        <div className="group flex items-center justify-between p-4 md:p-6 bg-zinc-950/40 border border-zinc-900 rounded-[2rem] hover:border-purple-500/30 transition-all hover:bg-zinc-900/10 shadow-xl overflow-hidden relative">
+            <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                 <Button onClick={() => handleDelete(item._id)} size="icon" variant="ghost" className="text-zinc-800 hover:text-red-500 transition-all">
+                    <Trash2 className="w-5 h-5" />
+                </Button>
+            </div>
+            
+            <div className="flex items-center gap-6">
+                {activeTab !== "experience" && (
+                    <div className="w-24 h-24 bg-zinc-900 rounded-2xl overflow-hidden border border-zinc-800 shadow-inner group-hover:scale-105 transition-transform duration-500">
+                        <img 
+                            src={item.src || item.coverImage || "https://images.unsplash.com/photo-1555066931-4365d14bab8c?q=80&w=1000&auto=format&fit=crop"} 
+                            className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity duration-300" 
+                        />
+                    </div>
+                )}
+                <div className="text-left flex-1 h-full flex flex-col justify-center">
+                    <div className="flex items-center gap-3 mb-1">
+                        <h3 className="text-lg md:text-xl font-black tracking-tighter uppercase italic text-zinc-300 group-hover:text-white transition-colors">{item.title}</h3>
+                        {activeTab === "blogs" && (
+                            item.isPublished ? <Badge className="bg-green-500/10 text-green-500 border-green-500/20 text-[6px] tracking-tighter">LIVE</Badge> : <Badge variant="outline" className="text-[6px] text-zinc-700 tracking-tighter">DRAFT</Badge>
+                        )}
+                    </div>
+                    <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-[0.15em] text-zinc-600">
+                        <span className="flex items-center gap-1.5">
+                            {item.category === "work" ? <Briefcase className="w-2.5 h-2.5" /> : (item.category ? item.category : (item.tags ? "TAGGED" : "OFFLINE"))}
+                        </span>
+                        <span className="w-1 h-1 bg-zinc-800 rounded-full" />
+                        <span>{item.startDate ? `${item.startDate}_TO_${item.endDate}` : (new Date(item.publishedAt || item.createdAt).toLocaleDateString())}</span>
+                    </div>
+
+                    <div className="flex gap-1 mt-3 opacity-30 group-hover:opacity-100 transition-opacity scrollbar-hide overflow-x-auto max-w-[200px] md:max-w-md">
+                        {item.skills?.frontend?.map((s: string) => (
+                           <div key={s} className="w-6 h-6 p-1.5 bg-zinc-900 rounded-lg flex-shrink-0">
+                               <img src={SKILLS[s as SkillNames]?.icon} className="w-full h-full object-contain" />
+                           </div>
+                        ))}
+                        {item.skills?.backend?.map((s: string) => (
+                           <div key={s} className="w-6 h-6 p-1.5 bg-zinc-900 rounded-lg flex-shrink-0">
+                               <img src={SKILLS[s as SkillNames]?.icon} className="w-full h-full object-contain" />
+                           </div>
+                        ))}
+                        {item.skills && !item.skills.frontend && item.skills.map((s: string) => (
+                            <div key={s} className="w-6 h-6 p-1.5 bg-zinc-900 rounded-lg flex-shrink-0">
+                                <img src={SKILLS[s as SkillNames]?.icon} className="w-full h-full object-contain" />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+            
+            <div className="flex flex-col gap-2 invisible group-hover:visible translate-x-12 group-hover:translate-x-0 transition-all duration-300">
+                <ChevronRight className="w-4 h-4 text-purple-500" />
+            </div>
+        </div>
+    );
+};
