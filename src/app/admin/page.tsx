@@ -4,11 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/ace-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/ace-textarea";
-import { Plus, Trash2, Edit2, Loader2, LogOut } from "lucide-react";
+import { Plus, Trash2, Edit2, Loader2, LogOut, Briefcase, Rocket } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export default function AdminDashboard() {
+  const [activeTab, setActiveTab] = useState("projects");
   const [projects, setProjects] = useState([]);
+  const [experiences, setExperiences] = useState([]);
   const [loading, setLoading] = useState(true);
   const [addingTask, setAddingTask] = useState(false);
   const router = useRouter();
@@ -16,25 +18,41 @@ export default function AdminDashboard() {
   const [newProject, setNewProject] = useState({
     title: "",
     category: "",
-    description: "",
+    content: "",
     src: "",
     live: "",
     github: "",
     skills: { frontend: [], backend: [] },
   });
 
-  useEffect(() => {
-    fetchProjects();
-  }, []);
+  const [newExperience, setNewExperience] = useState({
+    title: "",
+    company: "",
+    startDate: "",
+    endDate: "Present",
+    description: "",
+    skills: [],
+    category: "work",
+  });
 
-  const fetchProjects = async () => {
+  useEffect(() => {
+    fetchData();
+  }, [activeTab]);
+
+  const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/projects");
-      const data = await res.json();
-      setProjects(data);
+      if (activeTab === "projects") {
+        const res = await fetch("/api/projects");
+        const data = await res.json();
+        setProjects(data);
+      } else {
+        const res = await fetch("/api/experience");
+        const data = await res.json();
+        setExperiences(data);
+      }
     } catch (err) {
-      console.error("Failed to fetch projects");
+      console.error("Failed to fetch data");
     } finally {
       setLoading(false);
     }
@@ -50,11 +68,11 @@ export default function AdminDashboard() {
         body: JSON.stringify(newProject),
       });
       if (res.ok) {
-        fetchProjects();
+        fetchData();
         setNewProject({
           title: "",
           category: "",
-          description: "",
+          content: "",
           src: "",
           live: "",
           github: "",
@@ -68,15 +86,48 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleDeleteProject = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this project?")) return;
+  const handleAddExperience = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAddingTask(true);
     try {
-      const res = await fetch(`/api/admin/projects?id=${id}`, {
+      // Convert newline description to array
+      const data = {
+        ...newExperience,
+        description: newExperience.description.split("\n").filter(l => l.trim() !== ""),
+      };
+      const res = await fetch("/api/admin/experience", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (res.ok) {
+        fetchData();
+        setNewExperience({
+            title: "",
+            company: "",
+            startDate: "",
+            endDate: "Present",
+            description: "",
+            skills: [],
+            category: "work",
+        });
+      }
+    } catch (err) {
+      console.error("Failed to add experience");
+    } finally {
+      setAddingTask(false);
+    }
+  };
+
+  const handleDelete = async (id: string, type: string) => {
+    if (!confirm(`Are you sure you want to delete this ${type}?`)) return;
+    try {
+      const res = await fetch(`/api/admin/${type}?id=${id}`, {
         method: "DELETE",
       });
-      if (res.ok) fetchProjects();
+      if (res.ok) fetchData();
     } catch (err) {
-      console.error("Failed to delete project");
+      console.error(`Failed to delete ${type}`);
     }
   };
 
@@ -88,135 +139,151 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-black text-white p-8 font-sans">
       <div className="max-w-6xl mx-auto">
-        <header className="flex justify-between items-center mb-12">
+        <header className="flex justify-between items-end mb-12">
           <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-white to-zinc-500 bg-clip-text text-transparent">
-              Portfolio Admin
+            <h1 className="text-5xl font-extrabold bg-gradient-to-r from-white to-zinc-600 bg-clip-text text-transparent tracking-tighter">
+              Admin Panel
             </h1>
-            <p className="text-zinc-500 font-mono text-sm mt-2">Manage your projects and content</p>
+            <div className="flex gap-1 mt-4">
+              <button 
+                onClick={() => setActiveTab("projects")}
+                className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${activeTab === "projects" ? "bg-white text-black" : "bg-zinc-900 text-zinc-500 hover:bg-zinc-800"}`}
+              >
+                Projects
+              </button>
+              <button 
+                onClick={() => setActiveTab("experience")}
+                className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${activeTab === "experience" ? "bg-white text-black" : "bg-zinc-900 text-zinc-500 hover:bg-zinc-800"}`}
+              >
+                Experience
+              </button>
+            </div>
           </div>
-          <Button variant="outline" onClick={handleLogout} className="border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-900 border-2">
+          <Button variant="ghost" onClick={handleLogout} className="text-zinc-500 hover:text-red-500 hover:bg-red-950/20 mb-1">
             <LogOut className="w-4 h-4 mr-2" /> Logout
           </Button>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-          {/* Add Project Form */}
-          <section className="lg:col-span-1 space-y-6">
-            <div className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-2xl">
-                <h2 className="text-xl font-semibold mb-6 flex items-center">
-                    <Plus className="w-5 h-5 mr-3 text-white" /> Add New Project
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+          {/* Add Form */}
+          <section className="lg:col-span-5">
+            <div className="bg-zinc-900/40 border border-zinc-800 p-8 rounded-3xl sticky top-8">
+                <h2 className="text-2xl font-bold mb-8 flex items-center">
+                    {activeTab === "projects" ? <Rocket className="w-6 h-6 mr-3" /> : <Briefcase className="w-6 h-6 mr-3" />}
+                    Add {activeTab === "projects" ? "Project" : "Experience"}
                 </h2>
-                <form onSubmit={handleAddProject} className="space-y-4">
-                <div className="space-y-2">
-                    <Label htmlFor="title">Project Title</Label>
-                    <Input
-                    id="title"
-                    value={newProject.title}
-                    onChange={(e) => setNewProject({ ...newProject, title: e.target.value })}
-                    placeholder="e.g. THALA-CREDIT"
-                    required
-                     className="bg-black border-zinc-800"
-                    />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="category">Category</Label>
-                    <Input
-                    id="category"
-                    value={newProject.category}
-                    onChange={(e) => setNewProject({ ...newProject, category: e.target.value })}
-                    placeholder="e.g. Credit Management"
-                    required
-                     className="bg-black border-zinc-800"
-                    />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea
-                    id="description"
-                    value={newProject.description}
-                    onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
-                    placeholder="Brief overview of the project"
-                    required
-                     className="bg-black border-zinc-800 h-32"
-                    />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="src">Image URL (Thumbnail)</Label>
-                    <Input
-                    id="src"
-                    value={newProject.src}
-                    onChange={(e) => setNewProject({ ...newProject, src: e.target.value })}
-                    placeholder="https://... | /assets/..."
-                    required
-                     className="bg-black border-zinc-800"
-                    />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="live">Live URL</Label>
-                        <Input
-                        id="live"
-                        value={newProject.live}
-                        onChange={(e) => setNewProject({ ...newProject, live: e.target.value })}
-                        placeholder="https://..."
-                         className="bg-black border-zinc-800"
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="github">Repo URL</Label>
-                        <Input
-                        id="github"
-                        value={newProject.github}
-                        onChange={(e) => setNewProject({ ...newProject, github: e.target.value })}
-                        placeholder="https://github.com/..."
-                         className="bg-black border-zinc-800"
-                        />
-                    </div>
-                </div>
-                <Button type="submit" className="w-full bg-white text-black font-bold h-12 mt-6 outline-none border-none ring-0 focus-visible:ring-0" disabled={addingTask}>
-                    {addingTask ? <Loader2 className="animate-spin" /> : "Save Project"}
-                </Button>
-                </form>
+                
+                {activeTab === "projects" ? (
+                    <form onSubmit={handleAddProject} className="space-y-4">
+                        <div className="grid grid-cols-1 gap-4">
+                            <div className="space-y-2">
+                                <Label>Title</Label>
+                                <Input value={newProject.title} onChange={(e) => setNewProject({...newProject, title: e.target.value})} placeholder="Project Name" required className="bg-black border-zinc-800 focus:border-white transition-all"/>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Category</Label>
+                                <Input value={newProject.category} onChange={(e) => setNewProject({...newProject, category: e.target.value})} placeholder="Web App, AI, etc." required className="bg-black border-zinc-800"/>
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Description (Markdown)</Label>
+                            <Textarea value={newProject.content} onChange={(e) => setNewProject({...newProject, content: e.target.value})} placeholder="Write about your project..." required className="bg-black border-zinc-800 min-h-[150px]"/>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Thumbnail URL</Label>
+                            <Input value={newProject.src} onChange={(e) => setNewProject({...newProject, src: e.target.value})} placeholder="/assets/... or https://..." required className="bg-black border-zinc-800"/>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Live Link</Label>
+                                <Input value={newProject.live} onChange={(e) => setNewProject({...newProject, live: e.target.value})} placeholder="Visit URL" className="bg-black border-zinc-800"/>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>GitHub Repo</Label>
+                                <Input value={newProject.github} onChange={(e) => setNewProject({...newProject, github: e.target.value})} placeholder="Repo URL" className="bg-black border-zinc-800"/>
+                            </div>
+                        </div>
+                        <Button type="submit" className="w-full bg-white text-black font-bold h-14 mt-4" disabled={addingTask}>
+                            {addingTask ? <Loader2 className="animate-spin" /> : "Publish Project"}
+                        </Button>
+                    </form>
+                ) : (
+                    <form onSubmit={handleAddExperience} className="space-y-4">
+                         <div className="grid grid-cols-1 gap-4">
+                            <div className="space-y-2">
+                                <Label>Job Title / Degree</Label>
+                                <Input value={newExperience.title} onChange={(e) => setNewExperience({...newExperience, title: e.target.value})} placeholder="Full Stack Developer" required className="bg-black border-zinc-800"/>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Company / Institution</Label>
+                                <Input value={newExperience.company} onChange={(e) => setNewExperience({...newExperience, company: e.target.value})} placeholder="Microsoft" required className="bg-black border-zinc-800"/>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Start Date</Label>
+                                <Input value={newExperience.startDate} onChange={(e) => setNewExperience({...newExperience, startDate: e.target.value})} placeholder="Jan 2024" required className="bg-black border-zinc-800"/>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>End Date</Label>
+                                <Input value={newExperience.endDate} onChange={(e) => setNewExperience({...newExperience, endDate: e.target.value})} placeholder="Present / Dec 2024" className="bg-black border-zinc-800"/>
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Description (One achievement per line)</Label>
+                            <Textarea value={newExperience.description} onChange={(e) => setNewExperience({...newExperience, description: e.target.value})} placeholder="Developed X using Y..." required className="bg-black border-zinc-800 min-h-[150px]"/>
+                        </div>
+                        <Button type="submit" className="w-full bg-white text-black font-bold h-14 mt-4" disabled={addingTask}>
+                            {addingTask ? <Loader2 className="animate-spin" /> : "Save Experience"}
+                        </Button>
+                    </form>
+                )}
             </div>
           </section>
 
-          {/* Project List */}
-          <section className="lg:col-span-2 space-y-6">
-            <h2 className="text-xl font-semibold mb-6 flex items-center">
-              Your Projects ({projects.length})
+          {/* List Display */}
+          <section className="lg:col-span-7">
+            <h2 className="text-2xl font-bold mb-8 text-zinc-400">
+                {activeTab === "projects" ? `Live Projects (${projects.length})` : `History (${experiences.length})`}
             </h2>
+            
             {loading ? (
-              <div className="flex justify-center p-12">
-                <Loader2 className="animate-spin w-8 h-8 text-zinc-500" />
+              <div className="flex justify-center p-20 border border-zinc-900 rounded-3xl bg-zinc-950/20">
+                <Loader2 className="animate-spin w-10 h-10 text-zinc-700" />
               </div>
             ) : (
                 <div className="space-y-4">
-                    {projects.map((p: any) => (
-                    <div key={p._id} className="group bg-zinc-900/30 border border-zinc-900 hover:border-zinc-800 hover:bg-zinc-900/50 transition-all p-6 rounded-2xl flex justify-between items-center">
-                        <div className="flex items-center gap-6">
-                            <div className="w-16 h-16 rounded-lg bg-zinc-800 overflow-hidden">
-                                {p.src && <img src={p.src} alt={p.title} className="w-full h-full object-cover opacity-80" />}
+                    {activeTab === "projects" ? projects.map((p: any) => (
+                        <div key={p._id} className="group flex items-center justify-between p-6 bg-zinc-900/20 border border-zinc-900 rounded-2xl hover:border-zinc-700 transition-all">
+                            <div className="flex items-center gap-6">
+                                <div className="w-20 h-20 bg-zinc-800 rounded-xl overflow-hidden border border-zinc-700">
+                                    <img src={p.src} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
+                                </div>
+                                <div className="text-left">
+                                    <h3 className="text-xl font-bold">{p.title}</h3>
+                                    <p className="text-sm text-zinc-500 font-mono italic">{p.category}</p>
+                                </div>
                             </div>
-                            <div>
-                                <h3 className="text-lg font-bold hover:text-white transition-colors">{p.title}</h3>
-                                <p className="text-sm text-zinc-500 font-mono mt-1">{p.category}</p>
-                            </div>
-                        </div>
-                        <div className="flex gap-2">
-                            <Button size="icon" variant="ghost" className="text-zinc-600 hover:text-white hover:bg-zinc-800">
-                                <Edit2 className="w-4 h-4" />
-                            </Button>
-                            <Button onClick={() => handleDeleteProject(p._id)} size="icon" variant="ghost" className="text-zinc-600 hover:text-red-500 hover:bg-red-950/20">
-                                <Trash2 className="w-4 h-4" />
+                            <Button onClick={() => handleDelete(p._id, "projects")} size="icon" variant="ghost" className="text-zinc-700 hover:text-red-500 hover:bg-red-950/20 transition-all">
+                                <Trash2 className="w-5 h-5" />
                             </Button>
                         </div>
-                    </div>
+                    )) : experiences.map((ex: any) => (
+                        <div key={ex._id} className="group flex items-center justify-between p-6 bg-zinc-900/20 border border-zinc-900 rounded-2xl hover:border-zinc-700 transition-all">
+                            <div className="text-left">
+                                <h3 className="text-xl font-bold">{ex.title}</h3>
+                                <p className="text-sm text-zinc-400 font-mono">{ex.company} • {ex.startDate} - {ex.endDate}</p>
+                                <p className="text-xs text-zinc-600 mt-2 line-clamp-1 italic">{ex.description[0]}</p>
+                            </div>
+                            <Button onClick={() => handleDelete(ex._id, "experience")} size="icon" variant="ghost" className="text-zinc-700 hover:text-red-500 hover:bg-red-950/20 transition-all">
+                                <Trash2 className="w-5 h-5" />
+                            </Button>
+                        </div>
                     ))}
-                    {projects.length === 0 && (
-                    <div className="text-center p-20 border-2 border-dashed border-zinc-900 rounded-3xl">
-                        <p className="text-zinc-600 font-mono">No projects found. Add one on the left!</p>
-                    </div>
+                    {(activeTab === "projects" ? projects : experiences).length === 0 && (
+                        <div className="p-20 border-2 border-dashed border-zinc-900 rounded-3xl text-center text-zinc-700 font-mono">
+                            The space is empty... Start building your legacy.
+                        </div>
                     )}
                 </div>
             )}
