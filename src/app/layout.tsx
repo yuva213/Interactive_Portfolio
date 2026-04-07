@@ -66,7 +66,7 @@ export default function RootLayout({
         ></Script>
         {/* <Analytics /> */}
       </head>
-      <body>
+      <body suppressHydrationWarning>
         <Providers>
           <Header />
           {children}
