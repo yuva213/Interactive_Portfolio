@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { CalendarDays, User, Loader2 } from "lucide-react";
 import RevealAnimation from "@/components/reveal-animations";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Blog | Portfolio",
   description: "Thoughts, tutorials, and updates from the space.",
