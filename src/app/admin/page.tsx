@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/ace-textarea";
 import { Badge } from "@/components/ui/badge";
 import { 
-    Plus, Trash2, Loader2, LogOut, Briefcase, Rocket, 
+    Edit, Plus, Trash2, Loader2, LogOut, Briefcase, Rocket, 
     FileText, CheckCircle, Upload, Link as LinkIcon, 
     ChevronRight, Globe, Github
 } from "lucide-react";
@@ -19,6 +19,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [addingTask, setAddingTask] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [syncingAll, setSyncingAll] = useState(false);
   const router = useRouter();
 
@@ -66,6 +67,7 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
+    setEditingId(null);
     fetchItems();
   }, [activeTab]);
 
@@ -110,23 +112,63 @@ export default function AdminDashboard() {
         data = { ...newBlog, tags: newBlog.tags.split(",").map(t => t.trim()) };
       }
 
+      if (editingId) {
+        data = { ...data, _id: editingId };
+      }
+
       const res = await fetch(endpoint, {
-        method: "POST",
+        method: editingId ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
 
       if (res.ok) {
         fetchItems();
-        if (activeTab === "projects") setNewProject({ title: "", category: "", content: "", src: "", live: "", github: "", skills: { frontend: [], backend: [] } });
+        setEditingId(null);
+        if (activeTab === "projects") setNewProject({ title: "", category: "", content: "", src: "", live: "", github: "", screenshots: [], skills: { frontend: [], backend: [] } });
         else if (activeTab === "experience") setNewExperience({ title: "", company: "", startDate: "", endDate: "Present", description: "", skills: [], category: "work" });
         else if (activeTab === "blogs") setNewBlog({ title: "", content: "", coverImage: "", tags: "", isPublished: true });
       }
     } catch (err) {
-      console.error("Failed to create entry");
+      console.error("Failed to save entry");
     } finally {
       setAddingTask(false);
     }
+  };
+
+  const handleEdit = (item: any) => {
+    setEditingId(item._id);
+    if (activeTab === "projects") {
+      setNewProject({
+        title: item.title || "",
+        category: item.category || "",
+        content: item.content || "",
+        src: item.src || "",
+        live: item.live || "",
+        github: item.github || "",
+        screenshots: item.screenshots || [],
+        skills: item.skills || { frontend: [], backend: [] },
+      });
+    } else if (activeTab === "experience") {
+      setNewExperience({
+        title: item.title || "",
+        company: item.company || "",
+        startDate: item.startDate || "",
+        endDate: item.endDate || "Present",
+        description: Array.isArray(item.description) ? item.description.join("\n") : (item.description || ""),
+        skills: item.skills || [],
+        category: "work",
+      });
+    } else if (activeTab === "blogs") {
+      setNewBlog({
+        title: item.title || "",
+        content: item.content || "",
+        coverImage: item.coverImage || "",
+        tags: Array.isArray(item.tags) ? item.tags.join(", ") : (item.tags || ""),
+        isPublished: item.isPublished === undefined ? true : item.isPublished,
+      });
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleDelete = async (id: string) => {
@@ -241,7 +283,7 @@ export default function AdminDashboard() {
             <div className="bg-zinc-950/50 border border-zinc-900 p-8 md:p-12 rounded-[3.5rem] sticky top-8 shadow-2xl backdrop-blur-xl">
                 <h2 className="text-2xl font-black mb-10 flex items-center tracking-tighter text-white uppercase italic decoration-purple-500 decoration-4 underline-offset-8 underline">
                     {activeTab === "projects" ? <Rocket className="w-6 h-6 mr-4 text-purple-500" /> : (activeTab === "experience" ? <Briefcase className="w-6 h-6 mr-4 text-purple-500" /> : <FileText className="w-6 h-6 mr-4 text-purple-500" />)}
-                    CREATE_NEW_{activeTab.slice(0, -1)}
+                    {editingId ? `EDIT_${activeTab.slice(0, -1)}` : `CREATE_NEW_${activeTab.slice(0, -1)}`}
                 </h2>
                 
                 <form onSubmit={handleCreate} className="space-y-8">
@@ -274,7 +316,7 @@ export default function AdminDashboard() {
                     <Button type="submit" className="w-full bg-white text-black font-black h-20 mt-12 rounded-[1.5rem] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_20px_40px_-15px_rgba(255,255,255,0.2)] text-base uppercase italic tracking-tighter" disabled={addingTask}>
                         {addingTask ? <Loader2 className="animate-spin" /> : (
                             <div className="flex items-center gap-3">
-                                <span>PUSH_TO_DATABASE</span>
+                                <span>{editingId ? "UPDATE_DATABASE" : "PUSH_TO_DATABASE"}</span>
                                 <Plus className="w-5 h-5" />
                             </div>
                         )}
@@ -313,6 +355,7 @@ export default function AdminDashboard() {
                             key={item._id} 
                             item={item} 
                             activeTab={activeTab} 
+                            handleEdit={handleEdit}
                             handleDelete={handleDelete} 
                         />
                     ))}
@@ -693,10 +736,13 @@ const BlogForm = ({ newBlog, setNewBlog, uploading, handleFileUpload }: any) => 
     );
 };
 
-const ListItem = ({ item, activeTab, handleDelete }: any) => {
+const ListItem = ({ item, activeTab, handleDelete, handleEdit }: any) => {
     return (
         <div className="group flex items-center justify-between p-4 md:p-6 bg-zinc-950/40 border border-zinc-900 rounded-[2rem] hover:border-purple-500/30 transition-all hover:bg-zinc-900/10 shadow-xl overflow-hidden relative">
-            <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+                 <Button onClick={() => handleEdit(item)} size="icon" variant="ghost" className="text-zinc-800 hover:text-blue-500 transition-all">
+                    <Edit className="w-5 h-5" />
+                </Button>
                  <Button onClick={() => handleDelete(item._id)} size="icon" variant="ghost" className="text-zinc-800 hover:text-red-500 transition-all">
                     <Trash2 className="w-5 h-5" />
                 </Button>
