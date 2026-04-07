@@ -8,8 +8,9 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const project = await Project.create(body);
     return NextResponse.json(project, { status: 201 });
-  } catch (error) {
-    return NextResponse.json({ error: "Failed to create project" }, { status: 500 });
+  } catch (error: any) {
+    console.error("Error creating project:", error?.message || error);
+    return NextResponse.json({ error: error?.message || "Failed to create project" }, { status: 500 });
   }
 }
 
