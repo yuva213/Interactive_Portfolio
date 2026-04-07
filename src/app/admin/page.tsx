@@ -15,7 +15,7 @@ import { SKILLS, SkillNames } from "@/data/constants";
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("projects");
-  const [items, setItems] = useState([]);
+  const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [addingTask, setAddingTask] = useState(false);
   const [uploading, setUploading] = useState(false);
