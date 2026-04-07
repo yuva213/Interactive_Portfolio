@@ -1,0 +1,31 @@
+# 🛠️ Dynamic Portfolio Implementation Plan
+
+Transform your portfolio into a dynamic, database-driven app where you can manage projects, blogs, and experiences without editing code.
+
+## 1. Database Implementation (MongoDB)
+*   **Infrastructure**: Connect to MongoDB Atlas.
+*   **Models**: Define Mongoose schemas for Projects, Experience, and Blogs.
+*   **Connection**: Create a reusable `mongodb.ts` library for Next.js API stability.
+
+## 2. API Layer
+Create secure Next.js API routes under `src/app/api/admin/`.
+*   `GET /api/projects`: Fetch projects from the DB.
+*   `POST /api/admin/projects`: Create a new project (Admin Only).
+*   `PUT /api/admin/projects/[id]`: Update an existing project (Admin Only).
+*   `DELETE /api/admin/projects/[id]`: Remove a project (Admin Only).
+
+## 3. Administrative Interface (/admin)
+Build a private management dashboard.
+*   **Auth**: Secure the route using a password or NextAuth.
+*   **Forms**: User-friendly forms for all data management.
+*   **Media**: Integrate image uploads (e.g., Cloudinary or Vercel Blob).
+
+## 4. Content Synchronization
+Update frontend components (like `ProjectsGrid`) to fetch data from the API instead of static files.
+
+---
+
+### Phase 1: Setup (In Progress)
+1. Install `mongoose`.
+2. Connect to MongoDB Atlas via [.env](file:///c:/Users/yuvar/Desktop/web_hoster/learning_path/coding%20pixel/3D_Interactive_Portfolio/3D_Interactive_Portfolio/.env).
+3. Create Mongoose Models.
