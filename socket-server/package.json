@@ -4,7 +4,7 @@
   "description": "Local Socket.io server for Portfolio real-time features",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "node server.js", 
     "dev": "node server.js",
     "build": "echo 'Build complete!'"
   },
