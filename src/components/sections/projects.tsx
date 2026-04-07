@@ -15,60 +15,89 @@ import SmoothScroll from "../smooth-scroll";
 import projects, { Project } from "@/data/projects";
 import { cn } from "@/lib/utils";
 import { SectionHeader } from "./section-header";
-
 import SectionWrapper from "../ui/section-wrapper";
+import { Loader2 } from "lucide-react";
 
 const ProjectsSection = () => {
+  const [data, setData] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetch("/api/projects");
+        const json = await res.json();
+        if (Array.isArray(json) && json.length > 0) {
+          setData(json);
+        } else {
+          setData(projects);
+        }
+      } catch {
+        setData(projects);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
+
   return (
-    <SectionWrapper id="projects" className="max-w-7xl mx-auto md:h-[130vh]">
-      <SectionHeader id='projects' title="Projects" />
-      <div className="grid grid-cols-1 md:grid-cols-3">
-        {projects.map((project, index) => (
-          <Modall key={project.src} project={project} />
-        ))}
-      </div>
+    <SectionWrapper id="projects" className="max-w-7xl mx-auto md:min-h-[130vh]">
+      <SectionHeader id="projects" title="Projects" />
+      {loading ? (
+        <div className="flex justify-center p-20">
+          <Loader2 className="w-10 h-10 animate-spin text-zinc-500" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-y-8">
+          {data.map((project, index) => (
+            <Modall key={project._id || project.id} project={project} />
+          ))}
+        </div>
+      )}
     </SectionWrapper>
   );
 };
-const Modall = ({ project }: { project: Project }) => {
+
+const Modall = ({ project }: { project: any }) => {
   return (
     <div className="flex items-center justify-center">
       <Modal>
         <ModalTrigger className="bg-transparent flex justify-center group/modal-btn">
           <div
-            className="relative w-[400px] h-auto rounded-lg overflow-hidden"
+            className="relative w-[340px] md:w-[400px] h-auto rounded-lg overflow-hidden border border-zinc-900 group-hover/modal-btn:border-zinc-700 transition-all"
             style={{ aspectRatio: "3/2" }}
           >
             <Image
-              className="absolute w-full h-full top-0 left-0 hover:scale-[1.05] transition-all"
+              className="absolute w-full h-full top-0 left-0 hover:scale-[1.05] transition-all object-cover opacity-80 group-hover/modal-btn:opacity-100"
               src={project.src}
               alt={project.title}
-              width={300}
-              height={300}
+              width={400}
+              height={400}
             />
-            <div className="absolute w-full h-1/2 bottom-0 left-0 bg-gradient-to-t from-black via-black/85 to-transparent pointer-events-none">
+            <div className="absolute w-full h-1/2 bottom-0 left-0 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none">
               <div className="flex flex-col h-full items-start justify-end p-6">
-                <div className="text-lg text-left">{project.title}</div>
-                <div className="text-xs bg-white text-black rounded-lg w-fit px-2">
+                <div className="text-lg text-left font-bold">{project.title}</div>
+                <div className="text-xs bg-white text-black rounded-full w-fit px-3 py-0.5 mt-1">
                   {project.category}
                 </div>
               </div>
             </div>
           </div>
         </ModalTrigger>
-        <ModalBody className="md:max-w-4xl md:max-h-[80%] overflow-auto">
+        <ModalBody className="md:max-w-4xl md:max-h-[80%] overflow-auto bg-black border border-zinc-800">
           <SmoothScroll isInsideModal={true}>
             <ModalContent>
               <ProjectContents project={project} />
             </ModalContent>
           </SmoothScroll>
-          <ModalFooter className="gap-4">
-            <button className="px-2 py-1 bg-gray-200 text-black dark:bg-black dark:border-black dark:text-white border border-gray-300 rounded-md text-sm w-28">
-              Cancel
+          <ModalFooter className="gap-4 bg-zinc-950/50 border-t border-zinc-900">
+            <button className="px-4 py-2 text-zinc-500 hover:text-white transition-colors text-sm">
+              Close
             </button>
             <Link href={project.live} target="_blank">
-              <button className="bg-black text-white dark:bg-white dark:text-black text-sm px-2 py-1 rounded-md border border-black w-28">
-                Visit
+              <button className="bg-white text-black text-sm px-6 py-2 rounded-md font-bold hover:bg-zinc-200 transition-colors">
+                Visit Website
               </button>
             </Link>
           </ModalFooter>
@@ -79,60 +108,36 @@ const Modall = ({ project }: { project: Project }) => {
 };
 export default ProjectsSection;
 
-const ProjectContents = ({ project }: { project: Project }) => {
+const ProjectContents = ({ project }: { project: any }) => {
   return (
-    <>
-      <h4 className="text-lg md:text-2xl text-neutral-600 dark:text-neutral-100 font-bold text-center mb-8">
+    <div className="p-6 md:p-10">
+      <h4 className="text-2xl md:text-4xl text-neutral-100 font-bold text-center mb-10">
         {project.title}
       </h4>
-      <div className="flex flex-col md:flex-row md:justify-evenly max-w-screen overflow-hidden md:overflow-visible">
-        <div className="flex flex-row md:flex-col-reverse justify-center items-center gap-2 text-3xl mb-8">
-          <p className="text-sm mt-1 text-neutral-600 dark:text-neutral-500">
-            Frontend
-          </p>
-          {project.skills.frontend?.length > 0 && (
-            <FloatingDock items={project.skills.frontend} />
+      {/* Skill Rendering Logic - Adapted for DB/Static data */}
+      <div className="flex flex-col md:flex-row md:justify-evenly max-w-screen overflow-hidden md:overflow-visible gap-10 mb-12 border-y border-zinc-900 py-8">
+        <div className="flex flex-col items-center gap-4">
+           <p className="text-xs uppercase tracking-widest text-zinc-500 font-bold">FRONTEND</p>
+          {project.skills?.frontend?.length > 0 && (
+            <FloatingDock items={project.skills.frontend.map((s: any) => typeof s === 'string' ? { title: s, icon: <span>{s}</span> } : s)} />
           )}
         </div>
-        {project.skills.backend?.length > 0 && (
-          <div className="flex flex-row md:flex-col-reverse justify-center items-center gap-2 text-3xl mb-8">
-            <p className="text-sm mt-1 text-neutral-600 dark:text-neutral-500">
-              Backend
-            </p>
-            <FloatingDock items={project.skills.backend} />
+        {project.skills?.backend?.length > 0 && (
+          <div className="flex flex-col items-center gap-4">
+            <p className="text-xs uppercase tracking-widest text-zinc-500 font-bold">BACKEND</p>
+            <FloatingDock items={project.skills.backend.map((s: any) => typeof s === 'string' ? { title: s, icon: <span>{s}</span> } : s)} />
           </div>
         )}
       </div>
-      {/* <div className="flex justify-center items-center">
-        {project.screenshots.map((image, idx) => (
-          <motion.div
-            key={"images" + idx}
-            style={{
-              rotate: Math.random() * 20 - 10,
-            }}
-            whileHover={{
-              scale: 1.1,
-              rotate: 0,
-              zIndex: 100,
-            }}
-            whileTap={{
-              scale: 1.1,
-              rotate: 0,
-              zIndex: 100,
-            }}
-            className="rounded-xl -mr-4 mt-4 p-1 bg-white dark:bg-neutral-800 dark:border-neutral-700 border border-neutral-100 flex-shrink-0 overflow-hidden"
-          >
-            <Image
-              src={`${project.src.split("1.png")[0]}${image}`}
-              alt="screenshots"
-              width="500"
-              height="500"
-              className="rounded-lg h-20 w-20 md:h-40 md:w-40 object-cover flex-shrink-0"
-            />
-          </motion.div>
-        ))}
-      </div> */}
-      {project.content}
-    </>
+
+      <div className="prose prose-invert max-w-none">
+        {/* Support both JSX (static) and Text (database) */}
+        {typeof project.content === "string" ? (
+          <div className="font-mono text-zinc-400 leading-relaxed whitespace-pre-wrap">{project.content}</div>
+        ) : (
+          project.content
+        )}
+      </div>
+    </div>
   );
 };
