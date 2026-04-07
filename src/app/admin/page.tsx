@@ -246,6 +246,22 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleWipeAll = async () => {
+    const code = prompt("WARNING: This will permanently delete ALL Projects in your database! Type 'CONFIRM' to wipe them:");
+    if (code !== "CONFIRM") return;
+    try {
+      const res = await fetch("/api/admin/projects/bulk-delete", { method: "DELETE" });
+      if (res.ok) {
+        alert("All projects successfully deleted. Slate wiped clean!");
+        setItems([]);
+      } else {
+        alert("Failed to wipe database.");
+      }
+    } catch {
+      alert("Error wiping database.");
+    }
+  };
+
   const CATEGORIES = ["Web App", "Frontend", "Backend", "Fullstack", "AI / ML", "Mobile", "Web3", "Other"];
 
   return (
@@ -332,14 +348,23 @@ export default function AdminDashboard() {
                 </h2>
                 <div className="h-px bg-zinc-900 flex-1 mx-6" />
                 {activeTab === "projects" && (
-                    <Button 
-                        onClick={handleBulkSync} 
-                        disabled={syncingAll}
-                        className="bg-purple-500/10 text-purple-500 border border-purple-500/20 hover:bg-purple-500 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest"
-                    >
-                        {syncingAll ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : <Github className="w-3 h-3 mr-2" />}
-                        {syncingAll ? "SYNCING..." : "AUTO_SYNC_ALL"}
-                    </Button>
+                    <div className="flex gap-2">
+                        <Button 
+                            onClick={handleWipeAll} 
+                            className="bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest hidden md:flex"
+                        >
+                            <Trash2 className="w-3 h-3 mr-2" />
+                            WIPE_ALL
+                        </Button>
+                        <Button 
+                            onClick={handleBulkSync} 
+                            disabled={syncingAll}
+                            className="bg-purple-500/10 text-purple-500 border border-purple-500/20 hover:bg-purple-500 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest"
+                        >
+                            {syncingAll ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : <Github className="w-3 h-3 mr-2" />}
+                            {syncingAll ? "SYNCING..." : "AUTO_SYNC_ALL"}
+                        </Button>
+                    </div>
                 )}
             </div>
             
@@ -494,7 +519,7 @@ const TechPicker = ({ label, selected, onToggle, category }: any) => {
 const ProjectForm = ({ newProject, setNewProject, uploading, handleFileUpload, CATEGORIES }: any) => {
     const [githubUsername, setGithubUsername] = useState("yuva213");
     const [fetchingRepos, setFetchingRepos] = useState(false);
-    const [repos, setRepos] = useState([]);
+    const [repos, setRepos] = useState<string[]>([]);
 
     const toggleSkill = (skillName: string, category: "frontend" | "backend") => {
         setNewProject((prev: any) => {
@@ -790,10 +815,6 @@ const ListItem = ({ item, activeTab, handleDelete, handleEdit }: any) => {
                         ))}
                     </div>
                 </div>
-            </div>
-            
-            <div className="flex flex-col gap-2 invisible group-hover:visible translate-x-12 group-hover:translate-x-0 transition-all duration-300">
-                <ChevronRight className="w-4 h-4 text-purple-500" />
             </div>
         </div>
     );
