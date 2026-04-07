@@ -26,7 +26,7 @@ const config = {
   ],
   author: "Yuvaraj S",
   email: "yuvarajpro213@gmail.com",
-  site: "https://my-portfoloi-seven.vercel.app",
+  site: "https://interactive-portfolio-ruddy.vercel.app/",
 
   // for github stars button
   githubUsername: "yuva213",
