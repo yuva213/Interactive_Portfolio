@@ -60,6 +60,16 @@ const ProjectsSection = () => {
 };
 
 const Modall = ({ project }: { project: any }) => {
+  const isValidUrl = (url: string) => {
+    try {
+      return url && (url.startsWith("/") || url.startsWith("http://") || url.startsWith("https://"));
+    } catch {
+      return false;
+    }
+  };
+
+  const displaySrc = isValidUrl(project.src) ? project.src : "https://images.unsplash.com/photo-1555066931-4365d14bab8c?q=80&w=1000&auto=format&fit=crop";
+
   return (
     <div className="flex items-center justify-center">
       <Modal>
@@ -70,7 +80,7 @@ const Modall = ({ project }: { project: any }) => {
           >
             <Image
               className="absolute w-full h-full top-0 left-0 hover:scale-[1.05] transition-all object-cover opacity-80 group-hover/modal-btn:opacity-100"
-              src={project.src}
+              src={displaySrc}
               alt={project.title}
               width={400}
               height={400}
