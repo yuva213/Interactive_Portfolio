@@ -1,5 +1,6 @@
 import React from "react";
-import { getBlogPost, getBlogPosts } from "@/lib/mdx";
+import dbConnect from "@/lib/mongodb";
+import Blog from "@/models/Blog";
 import { MDXRemote } from "next-mdx-remote/rsc";
 import ScrollProgress from "@/components/ui/scroll-progress";
 import Link from "next/link";
@@ -9,19 +10,22 @@ import RevealAnimation from "@/components/reveal-animations";
 import { notFound } from "next/navigation";
 
 export async function generateStaticParams() {
-  const posts = getBlogPosts();
-  return posts.map((post) => ({
+  await dbConnect();
+  const posts = await Blog.find({ isPublished: true }, { slug: 1 }).lean();
+  return posts.map((post: any) => ({
     slug: post.slug,
   }));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  await dbConnect();
   try {
-    const post = getBlogPost(slug);
+    const post = await Blog.findOne({ slug }).lean() as any;
+    if (!post) return { title: "Post Not Found" };
     return {
-      title: `${post.metadata.title} | Portfolio`,
-      description: post.metadata.summary,
+      title: `${post.title} | Portfolio`,
+      description: post.content.substring(0, 160),
     };
   } catch {
     return {
@@ -69,58 +73,54 @@ const components = {
 
 export default async function BlogPost({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-
-  let post;
-  try {
-    post = getBlogPost(slug);
-  } catch {
-    notFound();
-  }
+  await dbConnect();
+  
+  const post = await Blog.findOne({ slug }).lean() as any;
 
   if (!post) notFound();
 
   return (
-    <div className="min-h-screen relative font-sans">
+    <div className="min-h-screen relative font-sans bg-black">
       <ScrollProgress className="bg-gradient-to-r from-purple-500 to-pink-500" />
 
-      <div className="container mx-auto px-4 py-24 max-w-3xl">
+      <div className="container mx-auto px-4 py-24 max-w-4xl">
         <RevealAnimation>
           <Link
             href="/blogs"
-            className="inline-flex items-center text-zinc-500 hover:text-purple-400 transition-colors mb-8 group"
+            className="inline-flex items-center text-zinc-500 hover:text-purple-400 transition-colors mb-8 group font-mono text-sm uppercase tracking-widest font-black"
           >
             <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
-            Back to Blogs
+            ←_RETURN_TO_LOGS
           </Link>
         </RevealAnimation>
 
         <RevealAnimation delay={0.1}>
-          <div className="mb-8">
-            <div className="flex gap-2 mb-4 flex-wrap">
-              {post.metadata.tags?.map((tag) => (
-                <Badge key={tag} variant="outline" className="border-purple-500/30 text-purple-400">
-                  {tag}
+          <div className="mb-12 border-b border-zinc-900 pb-12">
+            <div className="flex gap-4 mb-8 flex-wrap">
+              {post.tags?.map((tag: string) => (
+                <Badge key={tag} variant="outline" className="border-zinc-800 text-zinc-500 hover:text-purple-400 px-4 py-1 rounded-full uppercase text-[10px] font-black tracking-widest">
+                  #{tag}
                 </Badge>
               ))}
             </div>
-            <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-white to-zinc-500">
-              {post.metadata.title}
+            <h1 className="text-5xl md:text-7xl font-black mb-10 leading-[0.9] tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-zinc-700">
+              {post.title}
             </h1>
-            <div className="flex items-center gap-6 text-zinc-500 text-sm border-b border-zinc-800 pb-8">
+            <div className="flex items-center gap-10 text-zinc-600 text-xs font-black uppercase tracking-widest">
               <div className="flex items-center gap-2">
-                <User className="w-4 h-4" />
-                {post.metadata.author}
+                <User className="w-4 h-4 text-purple-600" />
+                BY_{post.author || "ADMIN"}
               </div>
               <div className="flex items-center gap-2">
-                <CalendarDays className="w-4 h-4" />
-                {post.metadata.publishedAt}
+                <CalendarDays className="w-4 h-4 text-purple-600" />
+                DATE_{new Date(post.publishedAt).toLocaleDateString()}
               </div>
             </div>
           </div>
         </RevealAnimation>
 
         <RevealAnimation delay={0.2}>
-          <article className="prose prose-invert max-w-none">
+          <article className="prose prose-invert max-w-none prose-purple lg:prose-xl">
             <MDXRemote source={post.content} components={components} />
           </article>
         </RevealAnimation>
