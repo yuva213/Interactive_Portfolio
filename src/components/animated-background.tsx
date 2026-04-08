@@ -58,11 +58,12 @@ const AnimatedBackground = () => {
           setSelectedSkill(skill);
           selectedSkillRef.current = skill;
         } else {
-          // If skill is missing, clear the text but still give tactile feedback
-          setSelectedSkill(null);
-          selectedSkillRef.current = null;
+          // If skill is missing, dynamically create a phantom skill so it doesn't loop sounds on every pixel movement
+          const phantomSkill = { id: Date.now(), name: e.target.name, label: e.target.name, shortDescription: "Not configured in constants.ts", color: "#ccc", icon: "" };
+          setSelectedSkill(phantomSkill);
+          selectedSkillRef.current = phantomSkill;
           splineApp.setVariable("heading", e.target.name);
-          splineApp.setVariable("desc", "Skill data not configured in constants.ts");
+          splineApp.setVariable("desc", "Not configured in constants.ts");
         }
       }
     }
