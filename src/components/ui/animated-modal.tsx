@@ -139,9 +139,9 @@ export const ModalBody = ({
             }}
           >
             <CloseIcon />
-            <ScrollArea className="h-[80dvh] w-full rounded-md border">
+            <div data-lenis-prevent="true" className="h-[80dvh] w-full overflow-y-auto rounded-md border scrollbar-hide">
               {children}
-            </ScrollArea>
+            </div>
           </motion.div>
         </motion.div>
       )}
