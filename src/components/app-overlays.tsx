@@ -37,7 +37,7 @@ export default function AppOverlays() {
       <EasterEggs />
       <ElasticCursor />
       <RadialMenu />
-      <GlobalClickSounds />
+      {/* <GlobalClickSounds /> */}
     </>
   );
 }
