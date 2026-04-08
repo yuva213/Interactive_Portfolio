@@ -50,12 +50,19 @@ const AnimatedBackground = () => {
       }
     } else {
       if (!selectedSkillRef.current || selectedSkillRef.current.name !== e.target.name) {
+        if (selectedSkillRef.current) playReleaseSound();
+        playPressSound();
+        
         const skill = SKILLS[e.target.name as SkillNames];
         if (skill) {
-          if (selectedSkillRef.current) playReleaseSound();
-          playPressSound();
           setSelectedSkill(skill);
           selectedSkillRef.current = skill;
+        } else {
+          // If skill is missing, clear the text but still give tactile feedback
+          setSelectedSkill(null);
+          selectedSkillRef.current = null;
+          splineApp.setVariable("heading", e.target.name);
+          splineApp.setVariable("desc", "Skill data not configured in constants.ts");
         }
       }
     }
@@ -82,13 +89,20 @@ const AnimatedBackground = () => {
     });
     splineApp.addEventListener("keyDown", (e) => {
       if (!splineApp || isInputFocused()) return;
+      
+      if (e.target.name !== "body" && e.target.name !== "platform") {
+        playPressSound();
+      }
+
       const skill = SKILLS[e.target.name as SkillNames];
       if (skill) {
-        playPressSound();
         setSelectedSkill(skill);
         selectedSkillRef.current = skill;
         splineApp.setVariable("heading", skill.label);
         splineApp.setVariable("desc", skill.shortDescription);
+      } else if (e.target.name !== "body" && e.target.name !== "platform") {
+        splineApp.setVariable("heading", e.target.name);
+        splineApp.setVariable("desc", "Skill data not configured in constants.ts");
       }
     });
     splineApp.addEventListener("mouseHover", handleMouseHover);
